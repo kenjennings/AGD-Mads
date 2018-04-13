@@ -1,4 +1,3 @@
-
 all: chap06.xex
 
 clean:
@@ -17,5 +16,5 @@ MAIN= chap06Main.asm
 
 chap06.xex: ${MAIN} ${SOURCES} ${INCLUDES} ${LIBRARIES}
 	mads ${MAIN}  -l -t -o:chap06.xex
-
+	
 

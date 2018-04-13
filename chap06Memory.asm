@@ -5,20 +5,25 @@
 
 	ORG $80
 
-ZeroPageTemp    .byte 0
-ZeroPageParam1  .byte 0
-ZeroPageParam2  .byte 0
-ZeroPageParam3  .byte 0
-ZeroPageParam4  .byte 0
-ZeroPageParam5  .byte 0
-ZeroPageParam6  .byte 0
-ZeroPageParam7  .byte 0
-ZeroPageParam8  .byte 0
-ZeroPageParam9  .byte 0
-ZeroPageLow     .byte 0
-ZeroPageHigh    .byte 0
-ZeroPageLow2    .byte 0
-ZeroPageHigh2   .byte 0
+zbTemp   .byte 0
+zbParam1 .byte 0
+zbParam2 .byte 0
+zbParam3 .byte 0
+zbParam4 .byte 0
+zbParam5 .byte 0
+zbParam6 .byte 0
+zbParam7 .byte 0
+zbParam8 .byte 0
+zbParam9 .byte 0
+zbLow    .byte 0
+zbHigh   .byte 0
+zbLow2   .byte 0
+zbHigh2  .byte 0
+
+;===============================================================================
+; lib_screen.asm wants these values below.
+; Declare here in page 0 for better performance.
+; Otherwise, remember to declare elsewhere.
 
 screenColumn       .byte 0
 screenScrollXValue .byte 0
@@ -68,38 +73,38 @@ screenScrollXValue .byte 0
 
 
 ;===============================================================================
-; $3308-$BFFF  Free memory for the program use.   (35.24K (worst case))
+; $3308-$BFFF  Minimum free memory for the program use. (35.24K (worst case))
 ;              See notes below about possible cartridges.
 
 
 ; ==========================================================================
 ; Create the custom game screen
 ;
-; By default this is 26 lines of Mode 2 text (aka BASIC GRAPHICS 0)
+; This is 26 lines of Mode 2 text (aka BASIC GRAPHICS 0)
 ; Why 26?  Because we can.
 ;
-; See ScreenSetMode (formerly LIBSCREEN_SETMULTICOLORMODE) to change the
-; Display List to text modes 2, 4, or 6 which all share the same number 
-; of scanlines per mode line, so the Display Lists are nearly identical.
+; See ScreenSetMode to change the Display List to text modes 2, 4, or 6 
+; which all share the same number of scanlines per mode line, so the 
+; Display Lists are nearly identical.
 ;
 ; mDL_LMS macro requires ANTIC.asm.  That should have already been included, 
 ; since the program is working on a screen display..
 
 	ORG $4000
-	
+
 SCREENRAM ; Imitate the C64 convention of a full-screen for a display mode.
-vScreenRam
+vaScreenRam
 	.ds [26*40]
-	
-vDisplayList
+
+vaDisplayList
 	.byte DL_BLANK_8   ; 8 blank scan lines
 	.byte DL_BLANK_8   ; 8 blank scan lines
-	mDL_LMS DL_TEXT_2, vScreenRam ; mode 2 text and init memory scan address
+	mDL_LMS DL_TEXT_2, vaScreenRam ; mode 2 text and init memory scan address
 	.rept 25
 	.byte DL_TEXT_2    ; 25 more lines of mode 2 text (memory scan is automatic)
 	.endr
 	.byte DL_JUMP_VB   ; End.  Wait for Vertical Blank.
-	.word vDisplayList ; Restart the Display List
+	.word vaDisplayList ; Restart the Display List
 
 
 ;===============================================================================

@@ -15,106 +15,123 @@
 ; a function to switch the display to other text modes that use the same 
 ;  number of scan lines per mode line.
 ;
-; Because screen RAM and Display List is declared here the 
+; Because screen RAM and Display List are declared here the 
 ; main file including this file should align the program address 
 ; to the next 4K border before including the file.
+
+
+; For best use of code and optimal execution the macro and library code 
+; expect the following variables declared in page 0:
+
+;screenColumn       .byte 0
+;screenScrollXValue .byte 0
+
+; If these are not added to page 0 before including this file, then 
+; they should be declared here.
 
 
 ;===============================================================================
 ; Variables
 
-; Rather than typing in a long series of values, good 
-; assemblers provide a repeat/looping function.
-; The repeat function below creates a list of 26 entries.
-ScreenRAMRowStartLow               ; SCREENRAM + 40*0, 40*1, 40*2 ... 40*24
-	.rept 26,#
-		.byte <[SCREENRAM+:1*40]
+; The 6502 can only multiply times 2.  Doing the math to 
+; multiply screen row coordinates by 40 takes several steps.
+; Rather than doing the work in code, instead we can do the work 
+; in data and pre-calculate math to multiply row values by 40.
+ 
+; Below are two tables to provide the starting address of each 
+; ro of screen memory.  When a location is needed simply use the 
+; Y coordinate as the lookup index into the table  ( lda table,y ).
+; Since addresses require two byte, one table provides the low
+; byte of the addres, and the other provides the high byte.
+
+; Creating the tables provides another benefit of using modern
+; tools for retro system programming.  
+
+; The code to set up the table data would have looked like this:
+;
+;ScreenRAMRowStartLow ; SCREENRAM + 40*0, 40*1, 40*2 ... 40*26
+;	byte <SCREENRAM,     <SCREENRAM+40,  <SCREENRAM+80
+;	byte <SCREENRAM+120, <SCREENRAM+160, <SCREENRAM+200
+;	byte <SCREENRAM+240, <SCREENRAM+280, <SCREENRAM+320
+;	byte <SCREENRAM+360, <SCREENRAM+400, <SCREENRAM+440
+;	byte <SCREENRAM+480, <SCREENRAM+520, <SCREENRAM+560
+;	byte <SCREENRAM+600, <SCREENRAM+640, <SCREENRAM+680
+;	byte <SCREENRAM+720, <SCREENRAM+760, <SCREENRAM+800
+;	byte <SCREENRAM+840, <SCREENRAM+880, <SCREENRAM+920
+;	byte <SCREENRAM+960, <SCREENRAM+1000
+
+; This provides an example of the benefits of modern assemblers.
+; here is the code to create a table of 26 entries containing the 
+; low byte of the addresses for the first byte of screen memory
+; in each row of text on screen.
+
+ScreenRAMRowStartLow  ; SCREENRAM + 40*0, 40*1, 40*2 ... 40*26
+	.rept 26,#        ; The # provides the current value of the loop
+		.byte <[40*:1+SCREENRAM]  ; low byte 40 * loop + Screen mem base.
 	.endr
-; This is what the .rept block replaces...
-;        byte <SCREENRAM,     <SCREENRAM+40,  <SCREENRAM+80
-;        byte <SCREENRAM+120, <SCREENRAM+160, <SCREENRAM+200
-;        byte <SCREENRAM+240, <SCREENRAM+280, <SCREENRAM+320
-;        byte <SCREENRAM+360, <SCREENRAM+400, <SCREENRAM+440
-;        byte <SCREENRAM+480, <SCREENRAM+520, <SCREENRAM+560
-;        byte <SCREENRAM+600, <SCREENRAM+640, <SCREENRAM+680
-;        byte <SCREENRAM+720, <SCREENRAM+760, <SCREENRAM+800
-;        byte <SCREENRAM+840, <SCREENRAM+880, <SCREENRAM+920
-;        byte <SCREENRAM+960
 
-ScreenRAMRowStartHigh  ;  SCREENRAM + 40*0, 40*1, 40*2 ... 40*24
+ScreenRAMRowStartHigh  ; SCREENRAM + 40*0, 40*1, 40*2 ... 40*26
 	.rept 26,#
-		.byte >[SCREENRAM+:1*40]
+		.byte >[40*:1+SCREENRAM] ; low byte 40 * loop + Screen mem base.
 	.endr
-
-
-;.if .not .def screenColumn
-;screenColumn       .byte 0
-;screenScrollXValue .byte 0
-;.endif
 
 
 ;==============================================================================
-; Originally: LIBSCREEN_SET1000
-;
+;										ScreenFillMem                A  X  
+;==============================================================================
 ; It is like a generic routine to clear memory, but it specifically sets 
-; 1,000 sequential bytes, and it is only used to clear screen RAM and 
-; Color RAM on the C64.  
+; 1,040 sequential bytes, and it is only used to clear screen RAM.  
 ;
-; Since the Atari doesn't use color RAM, the only purpose left is screen 
-; RAM, so this can be a dedicated routine.
-;
-;
-; The code expects  A  to contain the byte to put into all screen memory.
-;
-; ScreenFillMem uses  A, and X
+; ScreenFillMem expects  A  to contain the byte to put into all screen memory.
+;==============================================================================
 
-;.if DO_ScreenFillMem>0 .OR .ref ScreenFillMem
 ScreenFillMem       
-	ldx #208               ; Set loop value
+	ldx #208              ; Set loop value
 
 LoopScreenFillMem
-	sta SCREENRAM-1,x      ; Set +000 - +207 
-	sta SCREENRAM+207,x    ; Set +208 - +415  
-	sta SCREENRAM+415,x    ; Set +416 - +623 
-	sta SCREENRAM+623,x    ; Set +624 - +831
-	sta SCREENRAM+831,x    ; Set +832 - +1039
+	sta SCREENRAM-1,x     ; Set +000 - +207 
+	sta SCREENRAM+207,x   ; Set +208 - +415  
+	sta SCREENRAM+415,x   ; Set +416 - +623 
+	sta SCREENRAM+623,x   ; Set +624 - +831
+	sta SCREENRAM+831,x   ; Set +832 - +1039
 
 	dex
-	bne LoopScreenFillMem ; If x<>0 loop
+	bne LoopScreenFillMem ; If x<>0, then loop again
 
 	rts 
-;.endif
 
 
 ;==============================================================================
-; Originally: LIBSCREEN_SETMULTICOLORMODE
-; 
-; On the Atari the text/graphics modes are determined by the instructions in
-; the Display List.  
+;										ScreenSetMode                A  Y  
+;==============================================================================
+; The text/graphics modes on the Atari are determined by the 
+; instructions in the Display List.  
 ;
-; For the purpose of convenience the library creates its own Display List for 
-; a full screen of text similar to the C64.  In this case "normal" text 
-; is ANTIC text mode 2. 
+; The library creates a Display List as a full screen of text similar
+; to the way the C64 treats its display. (Done for the purpose of 
+; convenience - the least departure from the way the C64 works). 
+; In this case "normal" text is a scrren of ANTIC text mode 2. 
 ;
 ; To change the entire "screen" all the instructions in the Display List must 
 ; be changed.  The library supports rewriting all the instructions in the 
 ; Display with ANTIC modes 2, 4, and 6 which all share the same number of
 ; scan lines per text line and so have nearly identical Display Lists.
 ;
-; The code will exit if  A  does not contain 2, 4, or 6
+; The code will not change the display if  A  does not contain 2, 4, or 6
 ;
-; ScreenSetMode uses ZeroPageTemp, A, and Y
+; ScreenSetMode expects  A  to contain the new graphics mode.
+;
+; ScreenSetMode uses  Y  
+;==============================================================================
 
-;.if DO_ScreenSetMode>0 .OR .ref ScreenSetMode
 ScreenSetMode
+	cmp #2       ; Mode 2, "normal", 40 chars, 8 scan lines per mode line
+	beq bDoScreenSetMode
+	cmp #4       ; Mode 4, multi-color, 40 chars, 8 scan lines per mode line
+	beq bDoScreenSetMode
+	cmp #6       ; Mode 6, 5 color, 20 chars, 8 scan lines per mode line
+	bne bExitScreenSetMode ; not 2, 4, 6, so exit.
 
-	cmp #2 ; Mode 2, "normal", 40 chars, 8 scan lines per mode line
-	beq bDoScreenSetMode
-	cmp #4 ; Mode 4, multi-color, 40 chars, 8 scan lines per mode line
-	beq bDoScreenSetMode
-	cmp #6 ; Mode 6, 5 color, 20 chars, 8 scan lines per mode line
-	bne bExitScreenSetMode
-	
 bDoScreenSetMode
 	sta ZeroPageTemp ; Save mode.  We need it frequently.
 
@@ -138,65 +155,67 @@ bLoopScreenSetMode
 
 bExitScreenSetMode
 	rts 
-;.endif
 
-      
-; ==========================================================================
+
+;==============================================================================
+;										ScreenWaitScanLine                A  
+;==============================================================================
 ; Subroutine to wait for ANTIC to reach a specific scanline in the display.
 ;
 ; ScreenWaitScanLine expects  A  to contain the target scanline.
+;==============================================================================
 
-;.if DO_ScreenWaitScanLine>0 .OR .ref ScreenWaitScanLine
 ScreenWaitScanLine
 
-LoopWaitScanLine
-	cmp VCOUNT       ; Does A match the scanline?
-	bne LoopWaitScanLine ; Nop.  Then have not reached the line.
-	
+?LoopWaitScanLine
+	cmp VCOUNT           ; Does A match the scanline?
+	bne ?LoopWaitScanLine ; No. Then have not reached the line.
+
 	rts ; Yes.  We're there.  exit.
-;.endif
 
 
-; ==========================================================================
+;==============================================================================
+;										ScreenWaitFrames                A  Y
+;==============================================================================
 ; Subroutine to wait for a number of frames.
+;
+; FYI:
+; Calling  mScreenWaitFrames 1  is the same thing as 
+; directly calling ScreenWaitFrame.
 ;
 ; ScreenWaitFrames expects Y to contain the number of frames.
 ;
-; ScreenWaitFrame uses  A 
-;
-; FYI:  Calling  mScreenWaitFrames 1  is the same thing as 
-;       directly calling ScreenWaitFrame.
+; ScreenWaitFrame uses  A  
+;==============================================================================
 
-;.if DO_ScreenWaitFrames>0 .OR .ref ScreenWaitFrames
 ScreenWaitFrames
 	tay
 	beq ExitWaitFrames
 	
 LoopWaitFrames
-;	DO_ScreenWaitFrame .= 1
 	jsr ScreenWaitFrame
 	
 	dey
 	bne LoopWaitFrames
 	
-ExitWaitFrames	
+ExitWaitFrames
 	rts ; No.  Clock changed means frame ended.  exit.
-;.endif
 
-       
-; ==========================================================================
-; Subroutine to wait for the current frame to finish display
+
+;==============================================================================
+;										ScreenWaitFrame                A  
+;==============================================================================
+; Subroutine to wait for the current frame to finish display.
 ;
 ; ScreenWaitFrame  uses A
+;==============================================================================
 
-;.if DO_ScreenWaitFrame>0 .OR .ref ScreenWaitFrame
 ScreenWaitFrame
-	lda RTCLOK60 ; Read the clock incremented during vertical blank.
+	lda RTCLOK60  ; Read the jiffy clock incremented during vertical blank.
 
-LoopWaitFrame
+?LoopWaitFrame
 	cmp RTCLOK60      ; Is it still the same?
-	beq LoopWaitFrame ; Yes.  Then the frame has not ended.
-	
+	beq ?LoopWaitFrame ; Yes.  Then the frame has not ended.
+
 	rts ; No.  Clock changed means frame ended.  exit.
-;.endif
 

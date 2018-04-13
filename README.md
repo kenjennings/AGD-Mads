@@ -1,2 +1,4 @@
 # AGD-Mads
-Atari Game Development - MADS Assembler
+AGD - MADS Assembler
+
+Ported from book/repository.

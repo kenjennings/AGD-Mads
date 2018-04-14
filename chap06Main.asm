@@ -59,11 +59,9 @@ PRG_START
 	;     LIBSCREEN_SETCOLORS Blue, White, Black, Black, Black
 	; Given the Atari color register order use:
 	;     mScreenSetColors Blue, N/A, Black, White, N/A
-
 	mScreenSetColors COLOR_BLUE2|$06, COLOR_RED_ORANGE|$06, COLOR_BLACK, COLOR_GREY|$0E, COLOR_GREEN|$06
 
     ; Fill the bytes of screen memory. (40x26) display.
-
 	mScreenFillMem 33 ; This is the internal code for 'A'
 
 
@@ -71,19 +69,14 @@ PRG_START
 ; Update
 
 gMainLoop
-;        LIBSCREEN_WAIT_V 255
-        ;inc EXTCOL ; start code timer change border color
-        ; Game update code goes here
-        ;dec EXTCOL ; end code timer reset border color
+ 
         jmp gMainLoop
 
 
 ; ==========================================================================
 ; Library code and data.
-
-;	mAlign $1000 ; if screen memory is in the library then must align code.
  	
- 	icl "lib_screen.asm"
+ 	icl "chap06lib_screen.asm"
 
 
 ; ==========================================================================

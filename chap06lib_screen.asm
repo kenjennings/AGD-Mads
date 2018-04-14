@@ -133,22 +133,22 @@ ScreenSetMode
 	bne bExitScreenSetMode ; not 2, 4, 6, so exit.
 
 bDoScreenSetMode
-	sta ZeroPageTemp ; Save mode.  We need it frequently.
+	sta zbTemp   ; Save mode.  We need it frequently.
 
 	; First instruction has LMS and address. Special handling.
-	lda vDisplayList+2
-	and #$F0           ; Remove the mode bits.  Keep current option bits.
-	ora ZeroPageTemp   ; Replace the mode.
-	sta vDisplayList+2 ; Restore first instruction.
+	lda vaDisplayList+2
+	and #$F0            ; Remove the mode bits.  Keep current option bits.
+	ora zbTemp          ; Replace the mode.
+	sta vaDisplayList+2 ; Restore first instruction.
 
 	; Do similar to the regular instructions in the display list.
 	ldy #24  ; 0 to 24 is 25 more mode lines.
 
 bLoopScreenSetMode
-	lda vDisplayList+5,y
-	and #$F0             ; Remove the mode bits.  Keep current option bits.
-	ora ZeroPageTemp     ; Replace the mode.
-	sta vDisplayList+5,y ; Restore first instruction.
+	lda vaDisplayList+5,y
+	and #$F0              ; Remove the mode bits.  Keep current option bits.
+	ora zbTemp            ; Replace the mode.
+	sta vaDisplayList+5,y ; Restore first instruction.
 
 	dey
 	bpl bLoopScreenSetMode ; Iterate through the 25 sequential instructions.
@@ -167,9 +167,9 @@ bExitScreenSetMode
 
 ScreenWaitScanLine
 
-?LoopWaitScanLine
+bLoopWaitScanLine
 	cmp VCOUNT           ; Does A match the scanline?
-	bne ?LoopWaitScanLine ; No. Then have not reached the line.
+	bne bLoopWaitScanLine ; No. Then have not reached the line.
 
 	rts ; Yes.  We're there.  exit.
 
@@ -192,11 +192,11 @@ ScreenWaitFrames
 	tay
 	beq ExitWaitFrames
 	
-LoopWaitFrames
+bLoopWaitFrames
 	jsr ScreenWaitFrame
 	
 	dey
-	bne LoopWaitFrames
+	bne bLoopWaitFrames
 	
 ExitWaitFrames
 	rts ; No.  Clock changed means frame ended.  exit.
@@ -213,9 +213,9 @@ ExitWaitFrames
 ScreenWaitFrame
 	lda RTCLOK60  ; Read the jiffy clock incremented during vertical blank.
 
-?LoopWaitFrame
+bLoopWaitFrame
 	cmp RTCLOK60      ; Is it still the same?
-	beq ?LoopWaitFrame ; Yes.  Then the frame has not ended.
+	beq bLoopWaitFrame ; Yes.  Then the frame has not ended.
 
 	rts ; No.  Clock changed means frame ended.  exit.
 

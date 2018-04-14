@@ -19,7 +19,7 @@
 ; ==========================================================================
 ; Game Specific, Page 0 Declarations, etc.
 
-	icl "chap06Memory.asm"
+	icl "chap06MemoryMod.asm"
 
 
 ; ==========================================================================
@@ -55,41 +55,69 @@ PRG_START
 	lda #ENABLE_DL_DMA|PLAYFIELD_WIDTH_NORMAL
 	sta SDMCTL
 
-	; Set border and background colors.  On the C64 was:
-	;     LIBSCREEN_SETCOLORS Blue, White, Black, Black, Black
-	; Given the Atari color register order use:
-	;     mScreenSetColors Blue, N/A, Black, White, N/A
-
-	mScreenSetColors COLOR_BLUE2|$06, COLOR_RED_ORANGE|$06, COLOR_BLACK, COLOR_GREY|$0E, COLOR_GREEN|$06
+	jsr gResetColors ; Set colors for screen (the values already in memeory variables.)
 
     ; Fill the bytes of screen memory. (40x26) display.
-
 	mScreenFillMem 33 ; This is the internal code for 'A'
 
-	; ===== Modifications =====
-
-	; Display a text banner on screen explaining this modification.
-
+	; Display a text banner on screen explaining this modification. 
 	jsr ScreenBanner 
 
 	jsr gClearTime ; reset jiffy clock
+
 
 ;===============================================================================
 ; Update
 
 gMainLoop
 
-	lda RTCLOK+1     ; Get current 255 frame counter. 
+	lda RTCLOK+1     ; Get current value of clock incremented after 256 frames. 
 
-bLoopToDelay         ; 255 frames is about 4.27 second on an NTSC Atari.
+bLoopToDelay         ; 256 frames is about 4.27 second on an NTSC Atari.
 	cmp RTCLOK+1 
 	beq bLoopToDelay ; When it changes, then we've paused long enough.
 
 	jsr gRandomize   ; choose new colors for screen
 	
-	mScreenSetColors_M 0,1,2,3,4 ; Set New colors for screen
+	jsr gResetColors ; Set New colors for screen
 
-	jmp gMainLoop
+	lda #$00 ; Turn off the OS color cycling/screen anti-burn-in
+	sta ATRACT
+	
+	jmp gMainLoop 
+
+
+;===============================================================================
+; Randomize
+;
+; Choose new colors for background and screen, but selectively filter
+; values to insure readable text at all times.
+; 
+; Bright text backgrounds need dark text.
+; Dark backgound needs light text.
+
+gRandomize
+	lda RANDOM
+	sta zbColbak  ; Border color can be anything.
+
+	lda RANDOM
+	sta zbColor2  ; Text background
+
+	and #$08      ; Is luminance 8 (or more)?  Then the background is "bright."
+	bne bDarkText ; therefore, we need dark text.
+
+	; "Light" Text.  Guarantee the text is 8 brightness or greater.
+	lda RANDOM
+	ora #$08           ; Force minimum brightness dialed up to 8. 
+	bne bExitRandomize ; Guaranteed that the Z flag is not set now.
+
+bDarkText ; Dark text.  Force off the highest luminance bit.
+	lda RANDOM
+	and #$06          ; Turn off bit $08.  Allow only $04 and $02 to be on.
+	
+bExitRandomize
+	sta zbColor1      ; set text brightness 
+	rts
 
 
 ;===============================================================================
@@ -99,19 +127,27 @@ bLoopToDelay         ; 255 frames is about 4.27 second on an NTSC Atari.
 
 gClearTime
 	lda #$00
-	sta RTCLOK60 ; $14 ; jiffy clock
-	sta RTCLOK+1 ; $13
-	sta RTCLOK   ; $12 ; Highest byte
+	sta RTCLOK60 ; $14 ; jiffy clock, one tick per frame.  approx 1/60th/sec NTSC
+	sta RTCLOK+1 ; $13 ; 256 frame counter
+	sta RTCLOK   ; $12 ; 65,536 frame counter, Highest byte
 
 	rts
 
 
+;===============================================================================
+; resetColors
+;
+; Reload the OS shadow color registers from the values in the page 0 variables.
+
+gResetColors
+	mScreenSetColors_M zbColBak,zbColor0,zbColor1,zbColor2,zbColor3
+
+	rts
+	
 ; ==========================================================================
 ; Library code and data.
-
-;	mAlign $1000 ; if screen memory is in the library then must align code.
  	
- 	icl "lib_screen.asm"
+ 	icl "chap06lib_screenMod.asm"
 
 
 ; ==========================================================================

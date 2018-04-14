@@ -23,7 +23,7 @@
 
 
 ; ==========================================================================
-; This is not a complicated program, so losts of RAM is superfluous.  
+; This is not a complicated program, so need not be careful about RAM.  
 ; Just set code at a convenient place after DOS, DUP, etc.
 
 	ORG LOMEM_DOS_DUP; $3308  From DOS.asm.  First memory after DOS and DUP

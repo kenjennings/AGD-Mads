@@ -1,0 +1,35 @@
+all: chap06.xex chap06mod.xex
+
+INCLUDES= ANTIC.asm DOS.asm GTIA.asm OS.asm PIA.asm POKEY.asm
+
+# lib_screen really belongs in the library, but for 
+# academic/demonstation purposes it is updated per 
+# each example program until it is finally presented
+# fully complete at the end.
+# LIBRARIES= macros.asm macros_math.asm macros_screen.asm lib_screen.asm
+
+LIBRARIES= macros.asm macros_math.asm macros_screen.asm
+
+SOURCES= chap06Memory.asm chap06lib_screen.asm
+
+SOURCESMOD= chap06MemoryMod.asm chap06lib_screenMod.asm
+
+MAIN= chap06Main.asm
+
+MAINMOD= chap06MainMod.asm
+
+clean:
+	rm *.xex *.lst *.lab 
+
+run: chap06.xex
+	atari800 chap06.xex
+
+runmod: chap06mod.xex
+	atari800 chap06mod.xex
+
+chap06.xex: ${MAIN} ${SOURCES} ${INCLUDES} ${LIBRARIES}
+	mads ${MAIN}  -l -t -o:chap06.xex
+
+chap06mod.xex: ${MAINMOD} ${SOURCESMOD} ${INCLUDES} ${LIBRARIES}
+	mads ${MAINMOD}  -l -t -o:chap06mod.xex
+

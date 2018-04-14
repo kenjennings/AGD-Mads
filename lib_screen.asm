@@ -83,6 +83,8 @@ ScreenRAMRowStartHigh  ; SCREENRAM + 40*0, 40*1, 40*2 ... 40*26
 ; 1,040 sequential bytes, and it is only used to clear screen RAM.  
 ;
 ; ScreenFillMem expects  A  to contain the byte to put into all screen memory.
+;
+; ScreenFillMem uses  X
 ;==============================================================================
 
 ScreenFillMem       
@@ -167,9 +169,9 @@ bExitScreenSetMode
 
 ScreenWaitScanLine
 
-?LoopWaitScanLine
+bLoopWaitScanLine
 	cmp VCOUNT           ; Does A match the scanline?
-	bne ?LoopWaitScanLine ; No. Then have not reached the line.
+	bne bLoopWaitScanLine ; No. Then have not reached the line.
 
 	rts ; Yes.  We're there.  exit.
 
@@ -192,11 +194,11 @@ ScreenWaitFrames
 	tay
 	beq ExitWaitFrames
 	
-LoopWaitFrames
+bLoopWaitFrames
 	jsr ScreenWaitFrame
 	
 	dey
-	bne LoopWaitFrames
+	bne bLoopWaitFrames
 	
 ExitWaitFrames
 	rts ; No.  Clock changed means frame ended.  exit.
@@ -213,9 +215,9 @@ ExitWaitFrames
 ScreenWaitFrame
 	lda RTCLOK60  ; Read the jiffy clock incremented during vertical blank.
 
-?LoopWaitFrame
+bLoopWaitFrame
 	cmp RTCLOK60      ; Is it still the same?
-	beq ?LoopWaitFrame ; Yes.  Then the frame has not ended.
+	beq bLoopWaitFrame ; Yes.  Then the frame has not ended.
 
 	rts ; No.  Clock changed means frame ended.  exit.
 

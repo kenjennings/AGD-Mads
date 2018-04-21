@@ -1,5 +1,10 @@
 all: chap06.xex chap06mod.xex
 
+# Set debugging mode off (0) or on (1)
+# one of these must be set
+DO_DIAG=0
+#DO_DIAG=1
+
 INCLUDES= ANTIC.asm DOS.asm GTIA.asm OS.asm PIA.asm POKEY.asm
 
 # lib_screen really belongs in the library, but for 
@@ -8,14 +13,16 @@ INCLUDES= ANTIC.asm DOS.asm GTIA.asm OS.asm PIA.asm POKEY.asm
 # fully complete at the end.
 # LIBRARIES= macros.asm macros_math.asm macros_screen.asm lib_screen.asm
 
-LIBRARIES= macros.asm macros_math.asm macros_screen.asm
+MACROS= macros.asm macros_math.asm macros_screen.asm macros_diag.asm
+MACROSMOD= macros.asm macros_math.asm macros_screen.asm macros_diag.asm
 
-SOURCES= chap06Memory.asm chap06lib_screen.asm
+LIBRARIES= chap06lib_screen.asm chap06lib_diag.asm
+LIBRARIESMOD= chap06lib_screenMod.asm chap06lib_diag.asm
 
-SOURCESMOD= chap06MemoryMod.asm chap06lib_screenMod.asm
+SOURCES= chap06Memory.asm 
+SOURCESMOD= chap06MemoryMod.asm 
 
 MAIN= chap06Main.asm
-
 MAINMOD= chap06MainMod.asm
 
 clean:
@@ -27,9 +34,9 @@ run: chap06.xex
 runmod: chap06mod.xex
 	atari800 chap06mod.xex
 
-chap06.xex: ${MAIN} ${SOURCES} ${INCLUDES} ${LIBRARIES}
-	mads ${MAIN}  -l -t -o:chap06.xex
+chap06.xex: ${MAIN} ${SOURCES} ${MACROS} ${INCLUDES} ${LIBRARIES}
+	mads ${MAIN}  -l -t -d:DO_DIAG=${DO_DIAG} -o:chap06.xex
 
-chap06mod.xex: ${MAINMOD} ${SOURCESMOD} ${INCLUDES} ${LIBRARIES}
-	mads ${MAINMOD}  -l -t -o:chap06mod.xex
+chap06mod.xex: ${MAINMOD} ${SOURCESMOD} ${MACROSMOD} ${INCLUDES} ${LIBRARIESMOD}
+	mads ${MAINMOD}  -l -t -d:DO_DIAG=${DO_DIAG} -o:chap06mod.xex
 

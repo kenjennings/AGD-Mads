@@ -20,6 +20,8 @@ zbHigh   .byte 0
 zbLow2   .byte 0
 zbHigh2  .byte 0
 
+zwAddr1 = zbLow
+zwAddr2 = zbLow2
 
 ; Default colors.  Modifiable later to change the screen....
 
@@ -92,8 +94,13 @@ screenAddress2     .word 0
 ; ==========================================================================
 ; Create the custom game screen
 ;
-; This is 26 lines of Mode 2 text (aka BASIC GRAPHICS 0)
-; Why 26?  Because we can.
+; This is 27 lines of Mode 2 text (aka BASIC GRAPHICS 0)
+; Why 27?  Because we can. 
+;
+; Actually, the first and last lines are use for diagnostic
+; information when the DO_DIAG value is set.  This allows
+; the 25 lines between them to occupy the exact same scan 
+; lines whether or not DO_DIAG is set.
 ;
 ; See ScreenSetMode to change the Display List to text modes 2, 4, or 6 
 ; which all share the same number of scanlines per mode line, so the 
@@ -105,18 +112,41 @@ screenAddress2     .word 0
 	ORG $4000
 
 SCREENRAM ; Imitate the C64 convention of a full-screen for a display mode.
-vaScreenRam
-	.ds [26*40]
+vsScreenRam
+	.ds [25*40] ; 25 lines for the screen.
+	
+SCREENDIAGRAM
+vsScreenDiagRam
+.if DO_DIAG=1 
+	.ds [2*40]  ; 2 lines for diagnostics
+.endif
 
-vaDisplayList
+	.align $0400 ; Go to 1K boundary  to make sure display list 
+	             ; doesn't cross the 1K boundary.
+
+vsDisplayList
+.if DO_DIAG=0
+	.byte DL_BLANK_8   ; extra 8 blank to center 25 text lines
+.endif
+
 	.byte DL_BLANK_8   ; 8 blank scan lines
-	.byte DL_BLANK_8   ; 8 blank scan lines
-	mDL_LMS DL_TEXT_2, vaScreenRam ; mode 2 text and init memory scan address
-	.rept 25
-	.byte DL_TEXT_2    ; 25 more lines of mode 2 text (memory scan is automatic)
+	.byte DL_BLANK_4   ; 
+
+.if DO_DIAG=1
+	mDL_LMS DL_TEXT_2, vsScreenRam+1000 ; show from last bytes.
+.endif
+
+	mDL_LMS DL_TEXT_2, vsScreenRam ; mode 2 text and init memory scan address
+	.rept 24
+	.byte DL_TEXT_2   ; 24 more lines of mode 2 text (memory scan is automatic)
 	.endr
-	.byte DL_JUMP_VB   ; End.  Wait for Vertical Blank.
-	.word vaDisplayList ; Restart the Display List
+
+.if DO_DIAG=1
+	mDL_LMS DL_TEXT_2, vsScreenRam+1040 ; show from last bytes.
+.endif
+
+	.byte DL_JUMP_VB    ; End.  Wait for Vertical Blank.
+	.word vsDisplayList ; Restart the Display List
 
 
 ;===============================================================================
@@ -148,3 +178,5 @@ vaDisplayList
 ;       $D800-$DFFF  OS Floating Point Math Package (2K)
 ;       $E000-$E3FF  Default OS Screen Font (1K)
 ;       $E400-$FFFF  General OS functions (7K)
+
+

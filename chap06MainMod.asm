@@ -14,12 +14,21 @@
 
 	icl "macros.asm"
 	icl "macros_screen.asm"
+	icl "macros_math.asm"
 
+.if DO_DIAG=1
+	icl "macros_diag.asm"
+.endif
 
 ; ==========================================================================
 ; Game Specific, Page 0 Declarations, etc.
 
 	icl "chap06MemoryMod.asm"
+
+
+; ==========================================================================
+; Inform DOS of the program's Auto-Run address...
+	mDiskDPoke DOS_RUN_ADDR, PRG_START
 
 
 ; ==========================================================================
@@ -43,25 +52,24 @@ PRG_START
 	sta SDMCTL ; OS Shadow for DMA control
 
 	; Wait for frame update before touching other display configuration
-	mScreenWaitFrames 1
-	
+	mScreenWaitFrames_V 1
+
 	; point ANTIC to the new display.
-	lda #<vaDisplayList
-	sta SDLSTL
-	lda #>vaDisplayList
-	sta SDLSTH
+	mLoadInt_V SDLSTL,vsDisplayList
 	
 	; Turn the display back on.
 	lda #ENABLE_DL_DMA|PLAYFIELD_WIDTH_NORMAL
 	sta SDMCTL
 
-	jsr gResetColors ; Set colors for screen (the values already in memeory variables.)
+	; Set colors for screen. The values are already in page 
+	; zero memory variables.
+	jsr gResetColors 
 
-    ; Fill the bytes of screen memory. (40x26) display.
+	; Fill the bytes of screen memory. (40x25) display.
 	mScreenFillMem 33 ; This is the internal code for 'A'
 
 	; Display a text banner on screen explaining this modification. 
-	jsr ScreenBanner 
+	jsr libScreenBanner 
 
 	jsr gClearTime ; reset jiffy clock
 
@@ -71,9 +79,14 @@ PRG_START
 
 gMainLoop
 
-	lda RTCLOK+1     ; Get current value of clock incremented after 256 frames. 
+	lda RTCLOK+1     ; Get value of clock incremented after 256 frames. 
 
-bLoopToDelay         ; 256 frames is about 4.27 second on an NTSC Atari.
+bLoopToDelay             ; 256 frames is about 4.27 second on an NTSC Atari.
+.if DO_DIAG=1
+	mDiagByte RTCLOK,8
+	mDiagByte RTCLOK+1,11
+	mDiagByte RTCLOK+2,14
+.endif
 	cmp RTCLOK+1 
 	beq bLoopToDelay ; When it changes, then we've paused long enough.
 
@@ -81,7 +94,7 @@ bLoopToDelay         ; 256 frames is about 4.27 second on an NTSC Atari.
 	
 	jsr gResetColors ; Set New colors for screen
 
-	lda #$00 ; Turn off the OS color cycling/screen anti-burn-in
+	lda #$00         ; Turn off the OS color cycling/anti-screen burn-in
 	sta ATRACT
 	
 	jmp gMainLoop 
@@ -127,7 +140,7 @@ bExitRandomize
 
 gClearTime
 	lda #$00
-	sta RTCLOK60 ; $14 ; jiffy clock, one tick per frame.  approx 1/60th/sec NTSC
+	sta RTCLOK60 ; $14 ; jiffy clock, one tick per frame. approx 1/60th/sec NTSC
 	sta RTCLOK+1 ; $13 ; 256 frame counter
 	sta RTCLOK   ; $12 ; 65,536 frame counter, Highest byte
 
@@ -142,18 +155,23 @@ gClearTime
 gResetColors
 	mScreenSetColors_M zbColBak,zbColor0,zbColor1,zbColor2,zbColor3
 
+.if DO_DIAG=1
+	mDiagByte zbColBak, 48
+	mDiagByte zbColor1, 59
+	mDiagByte zbColor2, 70
+.endif
 	rts
-	
+
+
 ; ==========================================================================
 ; Library code and data.
  	
  	icl "chap06lib_screenMod.asm"
 
-
-; ==========================================================================
-; Inform DOS of the program's Auto-Run address...
-	mDiskDPoke DOS_RUN_ADDR, PRG_START
-	
+.if DO_DIAG=1
+	icl "chap06lib_diag.asm"
+.endif
 	
 	END
-	
+
+

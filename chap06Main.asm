@@ -15,6 +15,9 @@
 	icl "macros.asm"
 	icl "macros_screen.asm"
 
+.if DO_DIAG=1
+	icl "macros_diag.asm"
+.endif
 
 ; ==========================================================================
 ; Game Specific, Page 0 Declarations, etc.
@@ -22,6 +25,11 @@
 	icl "chap06Memory.asm"
 
 
+; ==========================================================================
+; Inform DOS of the program's Auto-Run address...
+	mDiskDPoke DOS_RUN_ADDR, PRG_START
+
+	
 ; ==========================================================================
 ; This is not a complicated program, so losts of RAM is superfluous.  
 ; Just set code at a convenient place after DOS, DUP, etc.
@@ -43,25 +51,19 @@ PRG_START
 	sta SDMCTL ; OS Shadow for DMA control
 
 	; Wait for frame update before touching other display configuration
-	mScreenWaitFrames 1
-	
+	mScreenWaitFrames_V 1
+
 	; point ANTIC to the new display.
-	lda #<vaDisplayList
-	sta SDLSTL
-	lda #>vaDisplayList
-	sta SDLSTH
-	
+	mLoadInt_V SDLSTL,vsDisplayList
+
 	; Turn the display back on.
 	lda #ENABLE_DL_DMA|PLAYFIELD_WIDTH_NORMAL
 	sta SDMCTL
 
-	; Set border and background colors.  On the C64 was:
-	;     LIBSCREEN_SETCOLORS Blue, White, Black, Black, Black
-	; Given the Atari color register order use:
-	;     mScreenSetColors Blue, N/A, Black, White, N/A
-	mScreenSetColors COLOR_BLUE2|$06, COLOR_RED_ORANGE|$06, COLOR_BLACK, COLOR_GREY|$0E, COLOR_GREEN|$06
+	; Set screen colors.  Background (border), colors 0...3.
+	mScreenSetColors_V COLOR_BLUE2|$06, COLOR_RED_ORANGE|$06, COLOR_BLACK, COLOR_GREY|$0E, COLOR_GREEN|$06
 
-    ; Fill the bytes of screen memory. (40x26) display.
+	; Fill the bytes of screen memory. (40x25) display.
 	mScreenFillMem 33 ; This is the internal code for 'A'
 
 
@@ -78,11 +80,10 @@ gMainLoop
  	
  	icl "chap06lib_screen.asm"
 
-
-; ==========================================================================
-; Inform DOS of the program's Auto-Run address...
-	mDiskDPoke DOS_RUN_ADDR, PRG_START
-	
+.if DO_DIAG=1
+	icl "chap06lib_diag.asm"
+.endif
 	
 	END
-	
+
+

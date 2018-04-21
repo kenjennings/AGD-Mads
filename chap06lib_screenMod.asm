@@ -1,26 +1,29 @@
-; ==========================================================================
-; Data declarations and subroutine library code 
+;==============================================================================
+; lib_screen.asm
+;==============================================================================
+
+;==============================================================================
+; Data declarations and subroutine library code
 ; performing screen operations.
 
-; ==========================================================================
+;==============================================================================
 ; For the sake of simplicity many of the library and supporting functions
-; purposely imitate the C64 with its pre-designated locations and 
-; full screen layout for playfield graphics.  
+; purposely imitate the C64 with its pre-designated locations and
+; full screen layout for playfield graphics.
 ;
-; In many game circumstances the screen creation is so variable
-; on the Atari that it is usually sensible to put that information under
-; the control of the main program, not the support library.  However,
-; in keeping with the simple C64 model, this library declares the 
-; screen memory for full screen of normal text.  The library supports
-; a function to switch the display to other text modes that use the same 
-;  number of scan lines per mode line.
+; Screen memory and the Display List is declared in Memory.asm.  In many
+; game circumstances the screen creation is so variable on the Atari
+; that it is usually sensible to put that information under the control
+; of the main program, not the support library.  However, in keeping with
+; the simple C64 model, this library assumes contiguous screen memory for
+; a full screen of text.
 ;
-; Because screen RAM and Display List are declared here the 
-; main file including this file should align the program address 
-; to the next 4K border before including the file.
-
-
-; For best use of code and optimal execution the macro and library code 
+; The default display is "normal" text, aka OS/BASIC mode 0 or ANTIC mode
+; 2 text.  The library supports a function to switch the display to other
+; text modes that use the same number of scan lines per mode line. (modes
+; 4 and 6.)
+;
+; For best use of code and optimal execution the macro and library code
 ; expect the following variables declared in page 0:
 
 ;screenColumn       .byte 0
@@ -32,6 +35,9 @@
 ; If these are not added to page 0 before including this file, then 
 ; they should be declared here.
 
+; Note that actual screen RAM, and the Display List are 
+; defined/declared in the Memory.asm file.
+
 
 ;===============================================================================
 ; Variables
@@ -42,13 +48,10 @@
 ; in data and pre-calculate math to multiply row values by 40.
  
 ; Below are two tables to provide the starting address of each 
-; ro of screen memory.  When a location is needed simply use the 
+; row of screen memory.  When a location is needed simply use the 
 ; Y coordinate as the lookup index into the table  ( lda table,y ).
-; Since addresses require two byte, one table provides the low
+; Since addresses require two bytes, one table provides the low
 ; byte of the addres, and the other provides the high byte.
-
-; Creating the tables provides another benefit of using modern
-; tools for retro system programming.  
 
 ; The code to set up the table data would have looked like this:
 ;
@@ -61,148 +64,80 @@
 ;	byte <SCREENRAM+600, <SCREENRAM+640, <SCREENRAM+680
 ;	byte <SCREENRAM+720, <SCREENRAM+760, <SCREENRAM+800
 ;	byte <SCREENRAM+840, <SCREENRAM+880, <SCREENRAM+920
-;	byte <SCREENRAM+960, <SCREENRAM+1000
+;	byte <SCREENRAM+960, <SCREENRAM+1000, <SCREENRAM+1040
 
-; This provides an example of the benefits of modern assemblers.
-; here is the code to create a table of 26 entries containing the 
-; low byte of the addresses for the first byte of screen memory
-; in each row of text on screen.
+; This provides an opportunity to demonstrate the benefits of modern 
+; assemblers.  Here is the code to create a table of 27 entries 
+; containing the low byte of the addresses pointing to the first byte 
+; of screen memory for each row of text on screen.
+;
+; The first 25 lines are the game display.  The last two lines
+; of data are for debug/diagnostic text. 
 
 ScreenRAMRowStartLow  ; SCREENRAM + 40*0, 40*1, 40*2 ... 40*26
-	.rept 26,#        ; The # provides the current value of the loop
-		.byte <[40*:1+SCREENRAM]  ; low byte 40 * loop + Screen mem base.
+	.rept 27,#        ; The # provides the current value of the loop
+		.byte <[40*:1+vsScreenRam]  ; low byte 40 * loop + Screen mem base.
 	.endr
 
 ScreenRAMRowStartHigh  ; SCREENRAM + 40*0, 40*1, 40*2 ... 40*26
-	.rept 26,#
-		.byte >[40*:1+SCREENRAM] ; low byte 40 * loop + Screen mem base.
+	.rept 27,#
+		.byte >[40*:1+vsScreenRam] ; low byte 40 * loop + Screen mem base.
 	.endr
 
+
 ;==============================================================================
-;										ScreenBanner                A  X  Y
+;														SCREENFILLMEM  A  X  
 ;==============================================================================
-; Copy text block to the screen memeory.
+; Subroutine to set all the bytes of screen memory.
 ;
-; This copies a block of text describing the features of the Modifications
-; into a fixed location in screen memory.
-;
-; ScreenBanner uses  A  X  and  Y
-;==============================================================================
-
-	; The only bad thing about modern computers is how difficult it is to 
-	; type those special graphics characters....
-
-	; This is intentionally done using internal screen codes, so the data
-	; can be copied directly without using Operating System print functions.
-
-BannerBytes
-	.byte $51 ; ctrl-q, upper left box corner
-	.rept 30
-		.byte $52 ; ctrl-R, horizontal line
-	.endr
-	.byte $45 ; ctrl-e, upper right box corner
-	
-	.byte $7C,"This modification of the      ",$7C ; $7C is vertical bar.
-	.byte $7C,"Chapter 6 introductory program",$7C
-	.byte $7C,"waits for 256 frames, which is",$7C
-	.byte $7C,"about 4 seconds, and then it  ",$7C
-	.byte $7C,"changes the screen colors.    ",$7C  
-
-	.byte $5A ; ctrl-z, lower left box corner
-	.rept 30
-		.byte $52 ; ctrl-R, horizontal line
-	.endr
-	.byte $43 ; ctrl-c, lower right box corner
-	
-ScreenBanner
-	lda #<BannerBytes   ; Setup zero page pointer to the banner
-	sta screenAddress1
-	lda #>BannerBytes
-	sta screenAddress1+1
-	
-	lda #<[SCREENRAM+84] ; Setup the Zero page pointer to the screen position
-	sta screenAddress2
-	lda #>[SCREENRAM+84]
-	sta screenAddress2+1
-
-	ldx #7 ; count the lines
-
-bLoopWriteScreenBannerLine
-	ldy #31
-	
-bLoopWriteScreenBannerChars
-	lda (screenAddress1),y ; Get character from banner buffer.
-	sta (screenAddress2),y ; store into screen position
-
-	dey                              ; Decrement. It is actually "writing" right to left.
-	bpl  bLoopWriteScreenBannerChars ; if it did not become -1, do another character
-
-	dex   ; decrement line counter..  At 0 we are done.
-	beq bExitScreenBanner
-
-	; Adjust starting positions for next line.
-
-	; Add 32 to the banner pointer.
-	clc
-	lda #32
-	adc screenAddress1
-	sta screenAddress1
-	bcc bOverAddress1High
-	inc screenAddress1+1 ; increment of 32 means this only ever changes by 1
-bOverAddress1High
-	
-	; Add 40 to the screen memory
-	clc
-	lda #40
-	adc screenAddress2
-	sta screenAddress2
-	bcc bDoNextBannerLine 
-	inc screenAddress2+1 ; increment of 40 means this only ever changes by 1
-
-bDoNextBannerLine
-	jmp bLoopWriteScreenBannerLine ; next line.  no clever branch.  Just goto.
-
-bExitScreenBanner
-	rts
-
-
-;==============================================================================
-;										ScreenFillMem                A  X  
-;==============================================================================
 ; It is like a generic routine to clear memory, but it specifically sets 
-; 1,040 sequential bytes, and it is only used to clear screen RAM.  
+; 1,000 sequential bytes, and it is only used to clear screen RAM.  
+;
+; However, the total memory allocation accounts for 27 lines of text.
+; Why 27?  The last two lines  of data are used for on-screen diagnostic 
+; information. One of these lines appears at the top of the screen, and 
+; the other appears at the bottom.  This allows the working 25 lines 
+; between the debug text lines to appear on screen at the same scan 
+; line positions as they do when the debug information is not included.
 ;
 ; ScreenFillMem expects  A  to contain the byte to put into all screen memory.
 ;
 ; ScreenFillMem uses  X
+;
 ;==============================================================================
 
-ScreenFillMem       
-	ldx #208              ; Set loop value
+libScreenFillMem       
+	ldx #250              ; Set loop value
 
-LoopScreenFillMem
-	sta SCREENRAM-1,x     ; Set +000 - +207 
-	sta SCREENRAM+207,x   ; Set +208 - +415  
-	sta SCREENRAM+415,x   ; Set +416 - +623 
-	sta SCREENRAM+623,x   ; Set +624 - +831
-	sta SCREENRAM+831,x   ; Set +832 - +1039
+bLoopScreenFillMem
+	sta vsScreenRam-1,x     ; Set +000 - +249 
+	sta vsScreenRam+249,x   ; Set +250 - +499  
+	sta vsScreenRam+499,x   ; Set +500 - +749 
+	sta vsScreenRam+749,x   ; Set +750 - +999
 
 	dex
-	bne LoopScreenFillMem ; If x<>0, then loop again
+	bne bLoopScreenFillMem ; If x<>0, then loop again
+
+	; The debug lines are always cleared to spaces.
+.if DO_DIAG=1
+	jsr libDiagClear
+.endif
 
 	rts 
 
 
 ;==============================================================================
-;										ScreenSetMode                A  Y  
+;													SCREENSETTEXTMODE  A  Y  
 ;==============================================================================
+; Subroutine to change the text mode of the entire display.
+;
 ; The text/graphics modes on the Atari are determined by the 
 ; instructions in the Display List.  
 ;
-; The library creates a Display List as a full screen of text similar
-; to the way the C64 treats its display. (Done for the purpose of 
-; convenience - the least departure from the way the C64 works). 
-; In this case "normal" text is a scrren of ANTIC text mode 2. 
+; The library creates a Display List as a full screen of text to act similarly
+; to the C64's screen treatment. (Done for the purpose of convenience - the 
+; least departure from the way the C64 works).  In this case "normal" text is 
+; a screen of ANTIC text mode 2. 
 ;
 ; To change the entire "screen" all the instructions in the Display List must 
 ; be changed.  The library supports rewriting all the instructions in the 
@@ -211,12 +146,14 @@ LoopScreenFillMem
 ;
 ; The code will not change the display if  A  does not contain 2, 4, or 6
 ;
-; ScreenSetMode expects  A  to contain the new graphics mode.
+; ScreenSetTextMode expects  A  to contain the new text mode.
 ;
-; ScreenSetMode uses  Y  
+; ScreenSetTextMode uses  Y  
+;
+; ScreenSetTextMode uses zbTemp in Page 0.
 ;==============================================================================
 
-ScreenSetMode
+libScreenSetTextMode
 	cmp #2       ; Mode 2, "normal", 40 chars, 8 scan lines per mode line
 	beq bDoScreenSetMode
 	cmp #4       ; Mode 4, multi-color, 40 chars, 8 scan lines per mode line
@@ -228,86 +165,178 @@ bDoScreenSetMode
 	sta zbTemp   ; Save mode.  We need it frequently.
 
 	; First instruction has LMS and address. Special handling.
-	lda vaDisplayList+2
-	and #$F0            ; Remove the mode bits.  Keep current option bits.
-	ora zbTemp          ; Replace the mode.
-	sta vaDisplayList+2 ; Restore first instruction.
+.if DO_DIAG=1
+	; First debug line
+	mScreenChangeModeInstruction_M vsDisplayList+2
+	; First text line
+	mScreenChangeModeInstruction_M vsDisplayList+5
 
-	; Do similar to the regular instructions in the display list.
-	ldy #24  ; 0 to 24 is 25 more mode lines.
+	ldy #24     ; 0 to 24 is 25 more mode lines.
+    DL_OFFSET=8 ; for next section.
+.else
+	; First text line without a debug line included
+	mScreenChangeModeInstruction_M vsDisplayList+3
+
+	ldy #23     ; 0 to 23 is 24 more mode lines.
+    DL_OFFSET=6 ; for next section
+.endif
+
+	; Do similar update to the remainder of the display list.
 
 bLoopScreenSetMode
-	lda vaDisplayList+5,y
+	lda vsDisplayList+DL_OFFSET,y 
 	and #$F0              ; Remove the mode bits.  Keep current option bits.
 	ora zbTemp            ; Replace the mode.
-	sta vaDisplayList+5,y ; Restore first instruction.
+	sta vsDisplayList+DL_OFFSET,y ; Restore first instruction.
 
 	dey
-	bpl bLoopScreenSetMode ; Iterate through the 25 sequential instructions.
+	bpl bLoopScreenSetMode ; Iterate through the sequential instructions.
 
 bExitScreenSetMode
 	rts 
 
 
 ;==============================================================================
-;										ScreenWaitScanLine                A  
+;														SCREENBANNER  A  X  Y
+;==============================================================================
+; Copy text block to the screen memeory.
+;
+; This copies a block of text describing the features of the Modifications
+; into a fixed location in screen memory.
+;
+; ScreenBanner uses  A  X  and  Y
+;==============================================================================
+
+; The only bad thing about modern computers is how difficult it is to 
+; type those special graphics characters....
+
+; This is intentionally done using internal screen codes, so the data
+; can be copied directly without using Operating System print functions.
+
+ScreenBannerBytes
+	; top line of banner. (top of box and corners)
+	.byte $51 ; ctrl-q, upper left box corner
+	.rept 30
+		.byte $52 ; ctrl-R, horizontal line
+	.endr
+	.byte $45 ; ctrl-e, upper right box corner
+
+	; Text between the box border left and right sides.	
+	.byte $7C,"This modification of the      ",$7C ; $7C is vertical bar.
+	.byte $7C,"Chapter 6 introductory program",$7C
+	.byte $7C,"waits for 256 frames, which is",$7C
+	.byte $7C,"about 4 seconds, and then it  ",$7C
+	.byte $7C,"changes the screen colors.    ",$7C  
+
+	; bottom line of banner. (bottom of box and corners)
+	.byte $5A ; ctrl-z, lower left box corner
+	.rept 30
+		.byte $52 ; ctrl-R, horizontal line
+	.endr
+	.byte $43 ; ctrl-c, lower right box corner
+	
+libScreenBanner
+	; Setup zero page pointer to the banner
+	mLoadInt_V screenAddress1,ScreenBannerBytes
+
+	; Setup the Zero page pointer to the screen position
+	mLoadInt_V screenAddress2,[vsScreenRam+84]	
+
+	ldx #7 ; count the lines
+
+bLoopWriteScreenBannerLine
+	ldy #31
+	
+bLoopWriteScreenBannerChars
+	lda (screenAddress1),y ; Get character from banner buffer.
+	sta (screenAddress2),y ; store into screen position
+
+	dey                              ; Decrement. It is "writing" right to left.
+	bpl  bLoopWriteScreenBannerChars ; if it did not become -1, do another character
+
+	dex   ; decrement line counter..  At 0 we are done.
+	beq bExitScreenBanner
+
+	; Adjust starting positions for next line.
+
+	; Add 32 to the banner pointer.
+	mWord_M_Add_V screenAddress1,screenAddress1,32
+	
+	; Add 40 to the screen memory
+	mWord_M_Add_V screenAddress2,screenAddress2,40
+
+	jmp bLoopWriteScreenBannerLine ; next line.  no clever branch.  Just goto.
+
+bExitScreenBanner
+
+.if DO_DIAG=1
+	; While we're here, let's write out the diagnostics labels
+	jsr libDiagWriteLabels
+.endif
+
+	rts
+
+
+;==============================================================================
+;                                                       SCREENWAITSCANLINE  A
 ;==============================================================================
 ; Subroutine to wait for ANTIC to reach a specific scanline in the display.
 ;
 ; ScreenWaitScanLine expects  A  to contain the target scanline.
 ;==============================================================================
 
-ScreenWaitScanLine
+libScreenWaitScanLine
 
 bLoopWaitScanLine
-	cmp VCOUNT            ; Does A match the scanline?
-	bne bLoopWaitScanLine ; No. Then have not reached the line.
+    cmp VCOUNT           ; Does A match the scanline?
+    bne bLoopWaitScanLine ; No. Then have not reached the line.
 
-	rts ; Yes.  We're there.  exit.
+    rts ; Yes.  We're there.  exit.
 
 
 ;==============================================================================
-;										ScreenWaitFrames                A  Y
+;                                                       SCREENWAITFRAMES  A  Y
 ;==============================================================================
 ; Subroutine to wait for a number of frames.
 ;
 ; FYI:
-; Calling  mScreenWaitFrames 1  is the same thing as 
+; Calling via macro  mScreenWaitFrames 1  is the same thing as
 ; directly calling ScreenWaitFrame.
 ;
 ; ScreenWaitFrames expects Y to contain the number of frames.
 ;
-; ScreenWaitFrame uses  A  
+; ScreenWaitFrame uses  A
 ;==============================================================================
 
-ScreenWaitFrames
-	tay
-	beq ExitWaitFrames
-	
+libScreenWaitFrames
+    tay
+    beq bExitWaitFrames
+
 bLoopWaitFrames
-	jsr ScreenWaitFrame
-	
-	dey
-	bne bLoopWaitFrames
-	
-ExitWaitFrames
-	rts ; No.  Clock changed means frame ended.  exit.
+    jsr libScreenWaitFrame
+
+    dey
+    bne bLoopWaitFrames
+
+bExitWaitFrames
+    rts ; No.  Clock changed means frame ended.  exit.
 
 
 ;==============================================================================
-;										ScreenWaitFrame                A  
+;                                                           SCREENWAITFRAME  A
 ;==============================================================================
 ; Subroutine to wait for the current frame to finish display.
 ;
 ; ScreenWaitFrame  uses A
 ;==============================================================================
 
-ScreenWaitFrame
-	lda RTCLOK60  ; Read the jiffy clock incremented during vertical blank.
+libScreenWaitFrame
+    lda RTCLOK60  ; Read the jiffy clock incremented during vertical blank.
 
 bLoopWaitFrame
-	cmp RTCLOK60       ; Is it still the same?
-	beq bLoopWaitFrame ; Yes.  Then the frame has not ended.
+    cmp RTCLOK60      ; Is it still the same?
+    beq bLoopWaitFrame ; Yes.  Then the frame has not ended.
 
-	rts ; No.  Clock changed means frame ended.  exit.
+    rts ; No.  Clock changed means frame ended.  exit.
+
 

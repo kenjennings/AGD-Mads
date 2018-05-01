@@ -223,24 +223,38 @@ vsSeqBounce   .byte 0,0,0,0,0 ; Does repeat go ABCDABCD or ABCDCBABCD (0/linear,
 ;===============================================================================
 ; Setup an on-screen object for the first time.
 ;
-; Given these base values in the Page 0 structure:
+; The macro puts the hardware values and coordinates into the
+; Page 0 locations.  This routine finalizes the Page Zero
+; locations.  Then the object is copied from Page Zero back
+; to the real PMOBJECTS entry location.
+;
+; These base values in the Page 0 structure are set
+; by the macro:
 ;     objID   ; pmID   ; color   ; size    ; vDelay
 ;     hPos    ; vPos
 ;     animID  ; animEnable
-; then finish filling our the page 0 values, and copy the established
-; values into the appropriate PMOBJECTS entry
+;
+;Now, finish the rest...
 
 libPmgInitObject
 	; The physical hardware associations. . .
 
+	lda #$00 ; Clear for later activities
 	ldx zbPmgIdent
-	bpl bDoPmgInitObject
-	rts ; If negative, then the object is disabled.
+	; If the Player/Missile object is negative then
+	; nothing else can be set for hardware.
+	bpl bDoPmgInitObject ; Positive.  build object.
+	; Negative.  Unset some values.
+	sta zbPmgEnable
+	sta zbSeqEnable
+	beq bDoPmgInitCopyToObject
 
 bDoPmgInitObject
-	lda #0                    ; clear collisions
 	sta zbPmgCollideToField
 	sta zbPmgCollideToPlayer
+
+	lda #$01
+	sta zbPmgEnable
 
 	lda vsPmgRamAddrLo,x ; Set object's Player memory base address
 	sta zwPmgAddr
@@ -294,11 +308,17 @@ bDoPmgInitObject
 	lda vsSeqDir,x
 	sta zbSeqDir
 
+bDoPmgInitCopyToObject
+	ldx zbPmgCurrentIdent
 
-bSkipPMAdrInit
+	lda zbPmgEnable
+	sta vsPmgEnable,x
 
+	lda zbPmgIdent
+	sta vsPmgIdent,x
 
-
+	lda zbPmgIdent
+	sta
 	rts
 
 

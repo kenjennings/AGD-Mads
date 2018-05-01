@@ -107,7 +107,7 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 	.else
 		lda #:animID
 	.endif
-	sta zbPmgAnimIdent
+	sta zbPmgSeqIdent
 
 
 	.if :animEnable>$FF ; then animEnable is an address
@@ -115,7 +115,7 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 	.else
 		lda #:animEnable
 	.endif
-	sta zbPmgAnimEnable
+	sta zbSeqEnable
 
 	jsr libPmgInitObject
 .endm

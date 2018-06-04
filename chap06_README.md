@@ -7,6 +7,7 @@ Create a text display.
 
 Create a text display and fill the screen with a character.
 
+---
 
 [MainMod](https://github.com/kenjennings/AGD-Mads/blob/master/chap06MainMod.asm "MainMod") 
 

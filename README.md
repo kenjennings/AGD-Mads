@@ -13,7 +13,7 @@ The game displays duplicate the 25 text lines standard with the C64.  The progra
 
 - The C64 has a 16-color palette and partly uses a color map to apply colors, and partially uses indirection through color registers.  The Atari has a 128-color palette and uses color registers/indirection for everything on the display, and can optionally combine sprite and playfield colors to produce extra colors.  This makes the systems vary in how to apply color, and how much color can be displayed on the same line. 
 
-- The C64 "Sprites" have more horizontal resolution than the Atari's Player/Missile graphics which have more vertical resolution.  Both have different memory organization, and are colored differently.
+- The C64 "Sprites" have more horizontal resolution than the Atari's "Player/Missile" graphics which have more vertical resolution.  Both have different memory organization.  Multi-color objects are done differently.
 
 - The C64's VIC-II video chip has four choices of video banks providing fixed memory addresses for text, graphics, and sprites.  The Atari's ANTIC video chip can reference all of the 16-bit address space in the system for playfield displays, and Player/Missile graphics, etc.
 

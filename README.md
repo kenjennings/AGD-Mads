@@ -5,7 +5,9 @@ Atari Game Development (MADS Assembler Version)
 
 Ported (or parodied depending on opinion) from the book "Retro Game Development - C64 Edition".
 
-The displays duplicate the 25 text lines standard with the C64.  The programs leverage the Atari's flexible graphics to provide two extra lines for runtime diagnostics ( one line above the normal display, and one line below.)  The diagnostic support can be turned on and off by defining the value DO_DIAG=1.
+The game displays duplicate the 25 text lines standard with the C64.  The programs leverage the Atari's flexible graphics to provide two extra lines for runtime diagnostics ( one line above the normal display, and one line below.)  The diagnostic support can be turned on and off by defining the value DO_DIAG=1.
+
+---
 
 6502 is the same between platforms.  Basic logic, math, and such are identical in the programs.  The differences come from the hardware  usage which is sometimes significant.  Generally speaking: 
 

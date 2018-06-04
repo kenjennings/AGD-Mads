@@ -18,4 +18,4 @@ Cycle the screen colors.
 
 ---
 
-[Back to Home](https://github.com/kenjennings/AGD-Mads/edit/master/README.md "Home") 
+[Back to Home](https://github.com/kenjennings/AGD-Mads/blob/master/README.md "Home") 

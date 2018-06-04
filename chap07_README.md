@@ -7,6 +7,7 @@ A player-controlled moving object.
 
 A spaceship on the screen.
 
+---
 
 [MainMod](https://github.com/kenjennings/AGD-Mads/blob/master/chap07MainMod.asm "MainMod") 
 
@@ -14,5 +15,4 @@ Something else.
 
 ---
 
-[Back to Home](https://github.com/kenjennings/AGD-Mads/edit/master/README.md "Home") 
-
+[Back to Home](https://github.com/kenjennings/AGD-Mads/blob/master/README.md "Home") 

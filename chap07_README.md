@@ -1,5 +1,5 @@
 # AGD-Mads Chapter 7
-A player-controled moving object.
+A player-controlled moving object.
 
 ---
 

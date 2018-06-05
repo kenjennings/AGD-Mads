@@ -19,6 +19,8 @@ Write informational/explanatory text to screen.
 
 Cycle the screen colors.
 
+The screen examples below include the diagnostic text lines reporting the value of the real-time clock, and the current color values.
+
 [![AGDChap06MainMod_1](https://github.com/kenjennings/AGD-Mads/blob/master/chap06MainMod_1.png)](#features2)
 
 [![AGDChap06MainMod_2](https://github.com/kenjennings/AGD-Mads/blob/master/chap06MainMod_2.png)](#features3)

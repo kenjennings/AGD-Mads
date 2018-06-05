@@ -1,3 +1,5 @@
+DO_DIAG=1 ; Turn on/off diagnostics
+
 ; ==========================================================================
 ; System Includes
 
@@ -61,15 +63,15 @@ PRG_START
 	lda #ENABLE_DL_DMA|PLAYFIELD_WIDTH_NORMAL
 	sta SDMCTL
 
-	; Set colors for screen. The values are already in page 
-	; zero memory variables.
-	jsr gResetColors 
-
 	; Fill the bytes of screen memory. (40x25) display.
 	mScreenFillMem 33 ; This is the internal code for 'A'
 
 	; Display a text banner on screen explaining this modification. 
 	jsr libScreenBanner 
+
+	; Set colors for screen. The values are already in page 
+	; zero memory variables.
+	jsr gResetColors 
 
 	jsr gClearTime ; reset jiffy clock
 
@@ -129,6 +131,7 @@ bDarkText ; Dark text.  Force off the highest luminance bit.
 	and #$06          ; Turn off bit $08.  Allow only $04 and $02 to be on.
 	
 bExitRandomize
+	and #$0F          ; Show only the luminance value
 	sta zbColor1      ; set text brightness 
 	rts
 
@@ -156,10 +159,11 @@ gResetColors
 	mScreenSetColors_M zbColBak,zbColor0,zbColor1,zbColor2,zbColor3
 
 .if DO_DIAG=1
-	mDiagByte zbColBak, 48
-	mDiagByte zbColor1, 59
-	mDiagByte zbColor2, 70
+	mDiagByte zbColBak, 47
+	mDiagByte zbColor1, 58
+	mDiagByte zbColor2, 69
 .endif
+
 	rts
 
 

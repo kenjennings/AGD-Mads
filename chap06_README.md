@@ -7,6 +7,8 @@ Create a text display.
 
 Create a text display and fill the screen with a character.
 
+[![AGDChap06Main](https://github.com/kenjennings/AGD-Mads/blob/master/chap06Main.png)](#features1)
+
 ---
 
 [MainMod](https://github.com/kenjennings/AGD-Mads/blob/master/chap06MainMod.asm "MainMod") 
@@ -16,6 +18,10 @@ Create a text display and fill the screen with a character.
 Write informational/explanatory text to screen.
 
 Cycle the screen colors.
+
+[![AGDChap06MainMod_1](https://github.com/kenjennings/AGD-Mads/blob/master/chap06MainMod_1.png)](#features2)
+
+[![AGDChap06MainMod_2](https://github.com/kenjennings/AGD-Mads/blob/master/chap06MainMod_2.png)](#features3)
 
 ---
 

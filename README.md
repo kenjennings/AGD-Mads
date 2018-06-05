@@ -5,11 +5,11 @@ Atari Game Development (MADS Assembler Version)
 
 Ported (or parodied depending on opinion) from the book "Retro Game Development - C64 Edition".
 
-The game displays duplicate the 25 text lines standard with the C64.  The programs leverage the Atari's flexible graphics to provide two extra lines for runtime diagnostics ( one line above the normal display, and one line below.)  The diagnostic support can be turned on and off by defining the value DO_DIAG=1.
+The game designs for Atari duplicate the 25 text lines standard with the C64.  The programs leverage the Atari's flexible graphics to optionally provide two extra lines for runtime diagnostics (one line above the normal display, and one line below.)  The diagnostic support can be turned on and off by defining the value DO_DIAG=1.
 
 ---
 
-6502 is the same between platforms.  Basic logic, math, and such are identical in the programs.  The differences come from the hardware  usage which is sometimes significant.  Generally speaking: 
+The 6502 is the same between platforms.  Basic logic, math, and such are identical in the programs.  The differences come from the hardware usage which is sometimes significant.  Generally speaking: 
 
 - The C64 has a 16-color palette and partly uses a color map to apply colors, and partially uses indirection through color registers.  The Atari has a 128-color palette and uses color registers/indirection for everything on the display, and can optionally combine sprite and playfield colors to produce extra colors.  This makes the systems vary in how to apply color, and how much color can be displayed on the same line. 
 

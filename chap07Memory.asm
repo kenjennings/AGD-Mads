@@ -53,7 +53,7 @@ screenScrollXValue .byte 0
 ; the object off screen where it is not visible.  Everything else, such as
 ; clearing the image bitmap, is an optional extra step.
 
-zbPmgCurrentIdent  .byte 0   ; current index number for PMGOBJECTS
+
 zbPmgEnable        .byte 0   ; Object is on/1 or off/0.  If off, skip processing.
 
 ; Direct Player/Missile hardware relationships...
@@ -70,13 +70,13 @@ zbPmgCollideToPlayer .byte 0   ; Display code's collected M-PL or P-PL collision
 zwPmgAddr          .word 0   ; objects' PMADR base (zwPmgAddr),zbPmgRealVPos
 
 zbPmgHPos          .byte 0   ; X position of each object (logical)
-zbPmgRealHPos      .byte 0   ; Real X position on screen (if controls adjusts PmgHPos)
+zbPmgRealHPos      .byte 0   ; X position on screen (when logic makes relative adjustments of PmgHPos)
 
 ; Still "hardware", but not registers. Just memory offsets.
 
 zbPmgVPos          .byte 0   ; Y coordinate of each object (logical)
-zbPmgRealVPos      .byte 0   ; Real Y position on screen (if controls adjusts PmgVPos)
-zbPmgPrevVPos      .byte 0   ; Previous Y position before move  (if controls adjusts PmgVPos)
+zbPmgRealVPos      .byte 0   ; Y position on screen (when logic makes relative adjustments of PmgVPos)
+zbPmgPrevVPos      .byte 0   ; Previous PmgRealVPos Y position before move
 
 ; Managing Animation Frame Bitmap Images. . .
 
@@ -85,24 +85,31 @@ zbSeqEnable    .byte 0   ; (W) Animation is Playing/1 or Paused/0
 
 zwSeqAddr   .word 0   ; (R) address of of animation sequence structure (zbPmgAnimLo),zbPmgAnimSeqFrame
 
-zbSeqCount        .byte 0 ; (R) Number of frames in the animation sequence.
+zbSeqFrameCount   .byte 0 ; (R) Number of frames in list of this animation sequence.
 zbSeqFrameIndex   .byte 0 ; (W) current index into frame list for this sequence.
-zbSeqFrameCurrent .byte 0 ; (W) current frame number.
-zbSeqFramePrev    .byte 0 ; (W) previous frame number. (No change means no redraw)
+zbSeqFrameCurrent .byte 0 ; (W) current frame number from the frame list.
+zbSeqFramePrev    .byte 0 ; (W) previous frame number from the frame list. (No change means no redraw)
 
 zbSeqDelay      .byte 0   ; (R) Number of TV frames to wait for each animation frame
-zbSeqDelayCount .byte 0   ; (W) Frame countdown when vsAnimDelay is not zero
+zbSeqDelayCount .byte 0   ; (W) Frame countdown when vsSeqDelay is not zero
 
 zbSeqLoop   .byte 0   ; (R) Does animation sequence repeat? 0/no, 1/yes
 zbSeqBounce .byte 0   ; (R) Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
-zbSeqDir    .byte 0   ; (W) Direction of animation progression. + or -
+zbSeqDir    .byte 0   ; (W) Current direction of animation progression. + or -
 
 ; Animation frame bitmap/graphics management...
-
 ; FYI "frame ID" numbers belong to the sequence management.
 
 zwFrameAddr    .word 0   ; (R) Address of current image frame
 zwFrameHeight  .byte 0   ; (R) Height of current image frame.
+
+; Forcing this to end of page 0 at location $FF.
+; This means the real (theoretical) list of working 
+; PMOBJECTS could be numbered from 0 to $FE (254).
+
+	ORG $FF
+
+zbPmgCurrentIdent  .byte 0   ; current index number for PMGOBJECTS
 
 
 ;===============================================================================

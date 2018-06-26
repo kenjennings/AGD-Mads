@@ -1,6 +1,20 @@
 ; ==========================================================================
 ; Data declarations and subroutine library code
 ; performing Player/missile operations.
+;
+; REQUIRED DEFINITIONS:
+;
+; PMG_RES
+; Player/Missile resolution for pmgraphics macros/library.
+; Use ANTIC's PM_1LINE_RESOLUTION and PM_2LINE_RESOLUTION
+; From command line this is:
+; 0 = 2 line resolution. (128 vertical pixels, or 2 scan lines per byte)
+; 8 = 1 line resolution (256 vertical pixels, or 1 scan lines per byte)
+; i.e PMG_RES=PM_1LINE_RESOLUTION
+;
+; vsPmgRam
+; This must be declared as the PMBASE
+
 
 ; ==========================================================================
 ; Player/Missile memory is declared in the Memory file.
@@ -9,20 +23,23 @@
 
 ; For Single Line Resolution:
 
+.if PMG_RES=PM_1LINE_RESOLUTION
 MISSILEADR = vsPmgRam+$300
 PLAYERADR0 = vsPmgRam+$400
 PLAYERADR1 = vsPmgRam+$500
 PLAYERADR2 = vsPmgRam+$600
 PLAYERADR3 = vsPmgRam+$700
-
+.endif
 
 ; For Double Line Resolution:
 
+.if PMG_RES=PM_2LINE_RESOLUTION
 ; MISSILEADR = vsPmgRam+$180
 ; PLAYERADR0 = vsPmgRam+$200
 ; PLAYERADR1 = vsPmgRam+$280
 ; PLAYERADR2 = vsPmgRam+$300
 ; PLAYERADR3 = vsPmgRam+$380
+.endif
 
 
 vsPmgRamAddrLo
@@ -79,17 +96,16 @@ vsPmgRamAddrHi
 ; where ANTIC reads them.  (It could write somewhere else completely different
 ; and the library would still function correctly to manage the object data.)
 ;
-; So, the architecture here is the "animation object" for display where
-; this libary uses the Animation data to mange image display and then
+; So, the architecture here is the "animation object" for display.
+; This libary uses the Animation data to mange image display and then
 ; applies this to the Player/Missile object memory.
-; are handled by another layer in tune with the scan line display activity.
 ;
 ; Animation ID numbers yield...
 ; lists of sequence numbers and control info which yield...
 ; list of frame numbers which yield...
 ; addresses to bitmaps.
 ; Or
-; Player Object -> Animation number, sequence index, current sequence step
+; Player Object -> Animation number, sequence index, and current sequence step
 ; sequence step -> frame number
 ; frame number -> bitmap address
 
@@ -130,22 +146,23 @@ vsPmgPrevVPos  .ds PMGOBJECTS, 0   ; Previous Y position before move  (if contro
 
 ; Animation sequence playing . . .
 
-vsSeqIdent  .ds PMGOBJECTS, 0  ; Animation ID in use
-vsSeqEnable .ds PMGOBJECTS, 0  ; Animation is playing/1 or stopped/0
+vsSeqIdent  .ds PMGOBJECTS, 0  ; (R) Animation ID in use
+vsSeqEnable .ds PMGOBJECTS, 0  ; (R/W) Animation is playing/1 or stopped/0
 
-vsSeqLo     .ds PMGOBJECTS, 0  ; low byte of animation sequence structure in use
-vsSeqHi     .ds PMGOBJECTS, 0  ; high byte of animation sequence structure in use
+vsPmgSeqLo     .ds PMGOBJECTS, 0  ; (R) low byte of animation sequence structure in use
+vsPmgSeqHi     .ds PMGOBJECTS, 0  ; (R) high byte of animation sequence structure in use
 
-vsSeqCount .ds PMGOBJECTS, 0   ; Number of frames in the animation sequence.
-vsSeqFrame .ds PMGOBJECTS, 0   ; current index into frame list for this sequence.
-vsSeqPrevFrame .ds PMGOBJECTS, 0   ; previous index used in this sequence. (No change means no redraw)
+vsSeqFrameCount   .ds PMGOBJECTS, 0   ; (R) Number of frames in the animation sequence.
+vsSeqFrameIndex   .ds PMGOBJECTS, 0   ; (W) current index into frame list for this sequence.
+vsSeqFrameCurrent .ds PMGOBJECTS, 0   ; (W) current frame number.
+vsSeqFramePrev    .ds PMGOBJECTS, 0   ; (W) previous frame number. (No change means no redraw)
 
-vsSeqDelay      .ds PMGOBJECTS, 0  ; Number of TV frames to wait for each animation frame
-vsSeqDelayCount .ds PMGOBJECTS, 0  ; Frame countdown when AnimDelay is not zero
+vsSeqDelay      .ds PMGOBJECTS, 0  ; (R) Number of TV frames to wait for each animation frame
+vsSeqDelayCount .ds PMGOBJECTS, 0  ; (W) Frame countdown when SeqDelay is not zero
 
-vsSeqLoop       .ds PMGOBJECTS, 0  ; Does animation sequence repeat? 0/no, 1/yes
-vsSeqBounce     .ds PMGOBJECTS, 0  ; Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
-vsSeqDir        .ds PMGOBJECTS, 0  ; Current direction of animation progression.
+vsSeqLoop       .ds PMGOBJECTS, 0  ; (R) Does animation sequence repeat? 0/no, 1/yes
+vsSeqBounce     .ds PMGOBJECTS, 0  ; (R) Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
+vsSeqDir        .ds PMGOBJECTS, 0  ; (W) Current direction of animation progression.
 
 ; Managing Animation Frame Bitmap Images. . .
 
@@ -158,20 +175,20 @@ vsSeqDir        .ds PMGOBJECTS, 0  ; Current direction of animation progression.
 ; Given an entry from a sequence list (aka frame ID):
 
 vsFrameAddrLo ; Low Byte of each animation image.
-	.byte <vsImageBlank
-	.byte <vsImagePlayer
-	.byte <vsImageEnemy1
-	.byte <vsImageEnemy2
-	.rept 5,#
+	.byte <vsImageBlank  ; 0
+	.byte <vsImagePlayer ; 1
+	.byte <vsImageEnemy1 ; 2
+	.byte <vsImageEnemy2 ; 3
+	.rept 5,#           ; 4, 5, 6, 7, 8
 		.byte <[21*:1+vsImageExplosion]
 	.endr
 
 vsFrameAddrHi ; High Byte of each animation image
-	.byte >vsImageBlank
-	.byte >vsImagePlayer
-	.byte >vsImageEnemy1
-	.byte >vsImageEnemy2
-	.rept 5,#
+	.byte >vsImageBlank  ; 0
+	.byte >vsImagePlayer ; 1
+	.byte >vsImageEnemy1 ; 2
+	.byte >vsImageEnemy2 ; 3
+	.rept 5,#           ; 4, 5, 6, 7, 8
 		.byte >[21*:1+vsImageExplosion]
 	.endr
 
@@ -193,18 +210,18 @@ vsSeq3 .byte 3 ; Enemy 2 animation image (frame number 3)
 vsSeq4 .byte 4,5,6,7,8,0 ; Explosion animation images (frame numbers 4 to 8, and then blank)
 
 vsSeqLo ; Low byte of address of each animation frame sequence.
-	.byte <vsAnimSeq0 ; Blankitty-blank
-	.byte <vsAnimSeq1 ; Player
-	.byte <vsAnimSeq2 ; Enemy 1
-	.byte <vsAnimSeq3 ; Enemy 2
-	.byte <vsAnimSeq4 ; Explosion
+	.byte <vsSeq0 ; Blankitty-blank
+	.byte <vsSeq1 ; Player
+	.byte <vsSeq2 ; Enemy 1
+	.byte <vsSeq3 ; Enemy 2
+	.byte <vsSeq4 ; Explosion
 
 vsSeqHi ; Low byte of address of each animation frame sequence.
-	.byte >vsAnimSeq0 ; Blankitty-blank
-	.byte >vsAnimSeq1 ; Player
-	.byte >vsAnimSeq2 ; Enemy 1
-	.byte >vsAnimSeq3 ; Enemy 2
-	.byte >vsAnimSeq4 ; Explosion
+	.byte >vsSeq0 ; Blankitty-blank
+	.byte >vsSeq1 ; Player
+	.byte >vsSeq2 ; Enemy 1
+	.byte >vsSeq3 ; Enemy 2
+	.byte >vsSeq4 ; Explosion
 
 vsSeqCount .byte 1,1,1,1,6 ; Number of frames in the sequence.
 
@@ -219,7 +236,7 @@ vsSeqBounce   .byte 0,0,0,0,0 ; Does repeat go ABCDABCD or ABCDCBABCD (0/linear,
 
 
 ;===============================================================================
-;														libPmgSetColor  A X Y
+;												libPmgInitObject  A X Y
 ;===============================================================================
 ; Setup an on-screen object for the first time.
 ;
@@ -240,7 +257,7 @@ libPmgInitObject
 	; The physical hardware associations. . .
 
 	lda #$00 ; Clear for later activities
-	ldx zbPmgIdent
+	ldx zbPmgCurrentIdent
 	; If the Player/Missile object is negative then
 	; nothing else can be set for hardware.
 	bpl bDoPmgInitObject ; Positive.  build object.
@@ -250,13 +267,13 @@ libPmgInitObject
 	beq bDoPmgInitCopyToObject
 
 bDoPmgInitObject
-	sta zbPmgCollideToField
-	sta zbPmgCollideToPlayer
+	sta zbPmgCollideToField ; Turn off any collected collision bits for the
+	sta zbPmgCollideToPlayer ; Player to Playfield and Player to Player
 
 	lda #$01
-	sta zbPmgEnable
+	sta zbPmgEnable ; Turn ON the object.
 
-	lda vsPmgRamAddrLo,x ; Set object's Player memory base address
+	lda vsPmgRamAddrLo,x ; Remember object's Player memory base address
 	sta zwPmgAddr
 	lda vsPmgRamAddrHi,x
 	sta zwPmgAddr+1
@@ -266,7 +283,7 @@ bDoPmgInitObject
 
 	lda zbPmgVPos     ; init vertical position
 	sta zbPmgRealVpos
-	sta zbPevHPos
+	sta zbPrevVPos
 
 	; The animation data associations.
 
@@ -284,7 +301,7 @@ bDoPmgInitObject
 	lda zbSeqEnable
 	beq bLPIODoDisabled ; Enable is 0.  Do something else.
 
-	lda vsSecCount,x ; Frame count for sequence
+	lda vsSeqCount,x ; Frame count for sequence
 	sta zbSeqCount
 
 	lda #0
@@ -310,6 +327,18 @@ bDoPmgInitObject
 
 bDoPmgInitCopyToObject
 	ldx zbPmgCurrentIdent
+	jsr libCopyZeroToPmg
+
+	rts
+
+
+;===============================================================================
+;												libCopyZeroToPmg  A X
+;===============================================================================
+; Copy all the Page zero values to the current
+; Player/Missile object:
+
+libCopyZeroToPmg
 
 	lda zbPmgEnable
 	sta vsPmgEnable,x
@@ -317,13 +346,171 @@ bDoPmgInitCopyToObject
 	lda zbPmgIdent
 	sta vsPmgIdent,x
 
-	lda zbPmgIdent
-	sta
+	lda zbPmgColor
+	sta vsPmgColor,x
+
+	lda zbPmgSize
+	sta vsPmgSize,x
+
+	lda zbPmgVDelay
+	sta vsPmgVDelay,x
+
+	lda zbPmgCollideToField
+	sta vsPmgCollideToField,x
+
+	lda zbPmgCollideToPlayer
+	sta vsPmgCollideToPlayer,x
+
+	lda zwPmgAddr
+	sta vsPmgAddrLo,x ; Remember object's Player memory base address
+	lda zwPmgAddr+1
+	sta vsPmgAddrHi,x
+
+	lda zbPmgHPos
+	sta vsPmgHPos,x
+	lda zbPmgRealHPos
+	sta vsPmgRealHPos,x
+
+	lda zbPmgVPos
+	sta vsPmgVPos,x
+	lda zbPmgRealVPos
+	sta vsPmgRealVPos,x
+	lda zbPmgPrevVPos
+	sta vsPmgPrevVPos,x
+
+	lda zbSeqIdent
+	sta vsSeqIdent,x
+
+	lda zbSeqEnable
+	sta vsSeqEnable,x
+
+	lda zwSeqAddr
+	sta vsSeqLo,x
+	lda zwSeqAddr+1
+	sta vsSeqHi,x
+
+	lda zbSeqFrameCount
+	sta vsSeqFrameCount,x
+	lda zbSeqFrameIndex
+	sta vsSeqFrameIndex,x
+	lda zbSeqFrameCurrent
+	sta vsSeqFrameCurrent,x
+	lda zbSeqFramePrev
+	sta vsSeqFramePrev,x
+
+	lda zbSeqDelay
+	sta vsSeqDelay,x
+
+	lda zbSeqDelayCount
+	sta vsSeqDelayCount,x
+
+	lda zbSeqLoop
+	sta vsSeqLoop,x
+
+	lda zbSeqBounce
+	sta vsSeqBounce,x
+
+	lda zbSeqDir
+	sta vsSeqDir,x
+
+;zwFrameAddr
+;zwFrameHeight
+
 	rts
 
 
 ;===============================================================================
-;														libPmgSetColor  A X Y
+;											libCopyPmgToZeroEdit  A X
+;===============================================================================
+; Copy all the current Player/Missile object Editable values to 
+; the Page zero locations.
+
+libCopyPmgToZeroEdit
+
+	lda vsPmgEnable,x
+	sta zbPmgEnable
+
+	lda vsPmgColor,x
+	sta zbPmgColor
+
+	lda vsPmgHPos,x
+	sta zbPmgHPos
+	lda vsPmgRealHPos,x
+	sta zbPmgRealHPos
+
+	lda vsPmgVPos,x
+	sta zbPmgVPos
+	lda vsPmgRealVPos,x
+	sta zbPmgRealVPos
+	lda vsPmgPrevVPos,x
+	sta zbPmgPrevVPos
+
+	lda vsSeqEnable,x
+	sta zbSeqEnable
+
+	lda vsSeqFrameIndex,x
+	sta zbSeqFrameIndex
+	lda vsSeqFrameCurrent,x
+	sta zbSeqFrameCurrent
+	lda vsSeqFramePrev,x
+	sta zbSeqFramePrev
+
+	lda vsSeqDelayCount,x
+	sta zbSeqDelayCount
+
+	lda vsSeqDir,x
+	sta zbSeqDir
+
+	rts
+
+
+;===============================================================================
+;											libCopyZeroEditToPmg  A X
+;===============================================================================
+; Copy all the Page zero Editable values back to the current
+; Player/Missile object:
+
+libCopyZeroEditToPmg
+
+	lda zbPmgEnable
+	sta vsPmgEnable,x
+
+	lda zbPmgColor
+	sta vsPmgColor,x
+
+	lda zbPmgHPos
+	sta vsPmgHPos,x
+	lda zbPmgRealHPos
+	sta vsPmgRealHPos,x
+
+	lda zbPmgVPos
+	sta vsPmgVPos,x
+	lda zbPmgRealVPos
+	sta vsPmgRealVPos,x
+	lda zbPmgPrevVPos
+	sta vsPmgPrevVPos,x
+
+	lda zbSeqEnable
+	sta vsSeqEnable,x
+
+	lda zbSeqFrameIndex
+	sta vsSeqFrameIndex,x
+	lda zbSeqFrameCurrent
+	sta vsSeqFrameCurrent,x
+	lda zbSeqFramePrev
+	sta vsSeqFramePrev,x
+
+	lda zbSeqDelayCount
+	sta vsSeqDelayCount,x
+
+	lda zbSeqDir
+	sta vsSeqDir,x
+
+	rts
+
+
+;===============================================================================
+;												libSeqRefToZero  A X Y
 ;===============================================================================
 
 ; Copy Sequence reference values to page 0.
@@ -370,66 +557,155 @@ libSeqRefToZero
 	lda vsSeqDir,x
 	sta zbSeqDir
 
+	rts
+
+
 ;===============================================================================
-;														libPmgSetColor  A Y
+;												libZeroToSeqRef  A X Y
+;===============================================================================
+
+; Copy page zero values to the Sequence reference.
+; X is sequence id.
+
+libZeroToSeqRef
+; Get the animation number (The Sequence)
+
+	ldx zbSeqIdent
+
+	lda zwSeqAddr
+	sta vsSeqLo,x       ; Collect the sequence address.
+	lda zwSeqAddr+1
+	sta vsSeqHi,x
+
+	sta zbSeqCount
+	sta vsSeqCount,x ; Copy Sequence frame count
+
+	; If Enable is 1 then configure all for first frame
+	lda zbSeqEnable
+	beq bLPIODoDisabled ; Enable is 0.  Do something else.
+
+	lda zbSeqCount
+	sta vsSecCount,x ; Frame count for sequence
+
+	lda #0
+	sta zbSeqFrameIndex ; Set animation index in sequence to 0.
+
+	tay ; Actual frame numbers
+	lda (zwSeqAddr),y
+	sta vsSeqFrameCurrent
+	sta vsSeqFramePrev
+
+	lda zbSeqDelay
+	sta vsSeqDelay,x
+	lda zbSeqDelayCount
+	sta vsSeqDelayCount,x
+
+	lda zbSeqLoop
+	sta vsSeqLoop,x
+
+	lda zbSeqBounce
+	sta vsSeqBounce,x
+
+	lda zbSeqDir
+	sta vsSeqDir,x
+
+	rts
+
+
+;===============================================================================
+;											libPmgSetSequence  A X Y
+;===============================================================================
+; Play animation... Actulaly just assign the animation to the object.
+; Given object ID in X, and sequence ID in Y, setup the PMGOBJECT 
+; to play an animation sequence.
+
+libPmgSetSequence
+
+	sty vsSeqIdent,X
+	
+	lda #TRUE
+	sta vsSeqEnable,X
+
+	lda vsSeqLo,y
+	sta vsPmgSeqLo,x
+	lda vsSeqHi,y
+	sta vsPmgSeqHi,x
+
+	lda vsSeqCount,y
+	sta vsSeqFrameCount,x
+
+	lda #0
+
+	rts
+
+
+
+;===============================================================================
+;												libPmgSetColor  A X
 ;===============================================================================
 ; Set Player/Missile color.
-; If Player Number is greater then 3, then update the "fifth" player COLOR3.
+; This is not updating actual color registers.  
+; This only updates the color in a PMGOBJECTS list of objects.
 ;
 ; Y  = object Number
 ; A  = Color
 
 libPmgSetColor
-	sta zbPmgColor,Y
+	sta vsPmgColor,x
 
 	rts
 
 
 
 ;==============================================================================
-;														libPmgSetFrame  A Y
+;												libPmgSetFrame  A X
 ;==============================================================================
 ; Set the Player to an animation frame.
 ;
 ; This requires a redraw of the player.
 ;
-; Y = Sprite Number    (Address)
+; X = Sprite Number    (Address)
 ; A = Anim Index       (Address)
 libPmgSetFrame
 
-		sta vsPmgCurrentFrame,y
+	sta vsPmgCurrentFrame,x
 
-		jsr redraw
+	jsr redraw
+
 	rts
 
+	
 ;==============================================================================
-;							PmgInit  A  X  Y
+;												PmgInit  A  X  Y
 ;==============================================================================
 
 libPmgInit
 	; get all Players/Missiles off screen.
 	jsr libPmgMoveAllZero
 
-    ; clear all bitmap images
-    jsr libPmgClearBitmaps
+	; clear all bitmap images
+	jsr libPmgClearBitmaps
 
 	; Tell ANTIC where P/M memory occurs for DMA to GTIA
 	lda #>vsPmgRam
 	sta PMBASE
 
 	; Enable GTIA to accept DMA to the GRAFxx registers.
-	lda #ENABLE_PLAYERS | ENABLE_MISSILES
+	lda #ENABLE_PLAYERS|ENABLE_MISSILES
 	sta GRACTL
 
-    rts
+	rts
 
 
 ;==============================================================================
-;										PmgMoveAllZero  A  X
+;											PmgMoveAllZero  A  X
 ;==============================================================================
+; Simple hardware reset of all Player/Missile registers.
+; Typically used only at program startup to zero everything
+; and prevent any screen glitchiness.
+;
 ; Reset all Players and Missiles horizontal positions to 0, so
 ; that none are visible no matter the size or bitmap contents.
-;
 ; Also reset sizes.
 
 libPmgMoveAllZero
@@ -450,7 +726,7 @@ bLoopZeroPMPosition
 
 
 ;==============================================================================
-;										PmgClearBitmaps                A  X
+;											PmgClearBitmaps  A  X
 ;==============================================================================
 ; Zero the bitmaps for all players and missiles
 
@@ -466,10 +742,11 @@ bLoopClearBitmaps
 	sta PLAYERADR0,x ; Player 2
 	sta PLAYERADR0,x ; Player 3
 	inx
-	bne bLoopClearBitmaps ; Use for single line resolution P/M graphics
-
-    ; bpl bLoopClearBitmaps ; Use for double line resolution P/M graphics
-
+	.if PMG_RES=PM_1LINE_RESOLUTION
+	bne bLoopClearBitmaps ; Count 1 to 255, then 0 breaks out of loop
+	.else ; Use for double line resolution P/M graphics
+	bpl bLoopClearBitmaps ; Count 1 to 127, then 128 breaks out of loop
+	.endif
 	rts
 
 

@@ -9,9 +9,12 @@
 ;===============================================================================
 ; Constants
 
-PMGOBJECTSMAX = 16 ;  Mostly rbitrary. Up to 255 in theory.
+PMGOBJECTSMAX = 16 ; Mostly arbitrary.  In theory, up to 255.  
+                 ; In practice, something else: the entry index value 
+                 ; corresponding to the zbPmgCurrentIdent zero page 
+                 ; addressed cannot be referenced directly.
 
-ANIMSEQMAX    = 5  ;  Number of Animation sequences managed.
+ANIMSEQMAX    = 5  ; Number of Animation sequences managed.  
 
 SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 
@@ -21,12 +24,43 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 ; Macros/Subroutines
 
 ;===============================================================================
+; 													mPmgLdxObjId  X
+;===============================================================================
+; Something very repetetive.
+; Load the X with the object ID.
+; If objID is the zero page variable for the current ID, use that.
+; Otherwise values less than 256 is an explicit value, and values
+; greater than or equal to 256 are from memory.
+
+.macro mPmgLdxObjId objId
+	.if :0<>1
+		.error "mPmgLdxObjId: 1 argument (object ID) required."
+	.endif
+
+	.if :objID<>zbPmgCurrentIdent ; Use the page 0 value?
+		mLDX_VM :objID          ; No. Either explicit or memory. 
+	.else 
+		ldx :zbPmgCurrentIdent   ; Yes.  reload from page 0.
+	.endif
+.endm
+
+
+;===============================================================================
 ;														mPmgInitObject
 ;===============================================================================
 ; Setup an on-screen object for the first time.
 ; Sets values in Page 0 structure for animation.
 ; Call the library init to complete setup, and copy the page zero info
 ; into the PMGOBJECTS lists.
+; (Everything is done here through Page 0 to make the macro and its 9 
+; arguments less memory abusive.  The alternative would be to 
+; declare a populated structure of all the arguments and pass that
+; by its address.  The macro method allows for addresses to variables,
+; so it is more flexible than a declred structure which would have 
+; to be determined at build time.  BUT, for the purposes of the simple
+; demo, the values are all known at build time, so using a structure
+; would make sense.  Have I talked myself out of anything yet?)
+
 ;
 ; objID (address)
 ; pmID
@@ -39,7 +73,7 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 ; animEnable
 ;
 ; Since the purpose of the library call is to initialize a page zero
-; memory structure for the object, is doesn;t make much sense to accomdate
+; memory structure for the object, it doesn't make much sense to accommodate
 ; arguments as page 0 addresses other than the object ID itself.
 ; Therefore, all argument value greater than 255 are assumed to be
 ; addresses and everything else byte-sized is assumed to be a literal value.
@@ -49,14 +83,12 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 		.error "PmgInitObject: 9 arguments (object ID, P/M ID, color, size, vDelay, hPos, vPos, animation ID, animation Enable) required."
 	.endif
 
-	; This allows the caller to iterate thriough objects using
-	; zbPmgCurrentIdent as the counter.
-	.if :objID<>zbPmgCurrentIdent
-		.if :objID>255
-			lda :objID ; Get value from memory
-		.else
-			lda #:objID ; Get explicit value
-		.endif
+	; This allows the caller to iterate through objects using
+	; the zbPmgCurrentIdent in page zero as the counter.
+	; Otherwise any other number less than 255 is assumed to be a
+	; literal value.
+	.if :objID<>zbPmgCurrentIdent ; don't let it change it here.
+		mLDA_VM :objID
 		sta zbPmgCurrentIdent ; Set in the zero page current object id.
 	.endif
 
@@ -67,200 +99,107 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 	.endif
 	sta zbPmgIdent
 
-	.if :color>$FF ; then color is an address
-		lda :color
-	.else
-		lda #:color
-	.endif
+	mLDA_VM :color
 	sta zbPmgColor
 
-	.if :size>$FF ; then size is an address
-		lda :size
-	.else
-		lda #:size
-	.endif
+	mLDA_VM :size
 	sta zbPmgSize
 
-	.if :vDelay>$FF ; then vDelay is an address
-		lda :vDelay
-	.else
-		lda #:vDelay
-	.endif
+	mLDA_VM :vDelay
 	sta zbPmgVDelay
 
-	.if :hPos>$FF ; then hPos is an address
-		lda :hPos
-	.else
-		lda #:hPos
-	.endif
+	mLDA_VM :hPos
 	sta zbPmgHPos ; Lib will copy to zbPmgRealHPos
 
-	.if :vPos>$FF ; then vPos is an address
-		lda :vPos
-	.else
-		lda #:vPos
-	.endif
+	mLDA_VM :vPos
 	sta zbPmgVPos; Lib will copy to zbPmgRealVPos and zbPmgPrevVPos
 
-	.if :animID>$FF ; then animID is an address
-		lda :animID
-	.else
-		lda #:animID
-	.endif
+	mLDA_VM :animID
 	sta zbPmgSeqIdent
 
-
-	.if :animEnable>$FF ; then animEnable is an address
-		lda :animEnable
-	.else
-		lda #:animEnable
-	.endif
+	mLDA_VM :animEnable
 	sta zbSeqEnable
 
 	jsr libPmgInitObject
 .endm
 
 
-zbPmgCurrentIdent  .byte 0   ; current index number for PMGOBJECTS
-zbPmgEnable        .byte 0   ; Object is on/1 or off/0.  If off, skip processing.
-zbPmgIdent         .byte $FF ; Missile 0 to 3. Player 4 to 7.  FF is unused
-
-zbPmgColor         .byte 0   ; Color of each object.
-zbPmgSize          .byte 0   ; HSize of object.
-zbPmgVDelay        .byte 0   ; VDelay (for double line resolution.)
-
-zwPmgAddr          .word 0   ; objects' PMADR base (zwPmgAddr),zbPmgRealVPos
-
-zbPmgHPos          .byte 0   ; X position of each object (logical)
-zbPmgRealHPos      .byte 0   ; Real X position on screen (if controls adjusts PmgHPos)
-
-zbPmgVPos          .byte 0   ; Y coordinate of each object (logical)
-zbPmgRealVPos      .byte 0   ; Real Y position on screen (if controls adjusts PmgVPos)
-zbPmgPrevVPos      .byte 0   ; Previous Y position before move  (if controls adjusts PmgVPos)
-
-zbPmgCollideToField  .byte 0   ; Display code's collected M-PF or P-PF collision value.
-zbPmgCollideToPlayer .byte 0   ; Display code's collected M-PL or P-PL collision value.
-
-zbPmgAnimIdent     .byte 0   ; Animation ID in use
-zbPmgAnimEnable    .byte 0   ; Animation is playing/1 or stopped/0
-
-zwPmgAnimSeqAddr      .word 0   ; address of of animation sequence structure (zbPmgAnimLo),zbPmgAnimSeqFrame
-zbPmgAnimSeqCount     .byte 0   ; Number of frames in the animation sequence.
-zbPmgAnimSeqFrame     .byte 0   ; current index into frame list for this sequence.
-zbPmgAnimPrevSeqFrame .byte 0   ; previous index used in this sequence. (No change means no redraw)
-
-zbPmgAnimDelay      .byte 0   ; Number of TV frames to wait for each animation frame
-zbPmgAnimDelayCount .byte 0   ; Frame countdown when vsAnimDelay is not zero
-
-zbPmgAnimLoop       .byte 0   ; Does animation sequence repeat? 0/no, 1/yes
-zbPmgAnimBounce     .byte 0   ; Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
-zbPmgAnimSeqDir     .byte 0   ; Current direction of animation progression. + or -
-
-zwAnimFrameAddr     .word 0   ; Address of current image frame
-zwAnimFrameHeight   .byte 0   ; Height of current image frame.
-
-
-
-
-
-defm    LIBSPRITE_DIDCOLLIDEWITHSPRITE_A  ; /1 = Sprite Number (Address)
-
-        ldy /1
-        lda SpriteNumberMask,y
-        and SPSPCL
-
-        endm
-
-
-;==============================================================================
-
-defm    LIBSPRITE_ISANIMPLAYING_A      ; /1 = Sprite Number    (Address)
-
-        ldy /1
-        lda spriteAnimsActive,y
-
-        endm
-
-
-;==============================================================================
-
-defm    LIBSPRITE_PLAYANIM_AVVVV        ; /1 = Sprite Number    (Address)
-                                        ; /2 = StartFrame       (Value)
-                                        ; /3 = EndFrame         (Value)
-                                        ; /4 = Speed            (Value)
-                                        ; /5 = Loop True/False  (Value)
-
-        ldy /1
-
-        lda #True
-        sta spriteAnimsActive,y
-        lda #/2
-        sta spriteAnimsStartFrame,y
-        sta spriteAnimsFrame,y
-        lda #/3
-        sta spriteAnimsEndFrame,y
-        lda #/4
-        sta spriteAnimsSpeed,y
-        sta spriteAnimsDelay,y
-        lda #/5
-        sta spriteAnimsLoop,y
-
-        endm
-
 ;===============================================================================
-;														mPmgSetColor_MV
+;											mPmgDidCollideWithPmg  X
 ;===============================================================================
-; Set Color for a player 0 to 3.
-; "Missiles" are also Player 0 to 3.
-; Any value greater than 3 will change the "fifth" player color COLOR3.
+; Check the collision  value for this (Y) objects's Player/Missile object.
+; This is testing the value in a PMGOBJECTS list.
+; This value must have been collected by a process highly dependant on 
+; screen placements.  
+; After clearing the collision register the next reliable read to populate 
+; this value in the list must occur AFTER the Player/Missile object has 
+; been displayed.
 ;
-; Sprite Number    (Address)
-; Color            (Value)
 
-.macro mPmgSetColor_MV objID,color
-	ldy #:objID
+.macro mPmgDidCollideWithPmg objID
+	.if :0<>1
+		.error "PmgDidCollideWithPmg: 1 argument (object ID) required."
+	.endif
+
+	mPmgLdxObjId :objID ; Load X with PMGOBJECTS Id
+
+	lda vsPmgCollideToPlayer, X
+.endm
+
+
+;===============================================================================
+;											mPmgIsAnimPlaying  X
+;===============================================================================
+; Check the anim progress value for this (X) objects's Player/Missile object.
+
+.macro mPmgIsAnimPlaying objID
+	.if :0<>1
+		.error "mPmgIsAnimPlaying: 1 argument (object ID) required."
+	.endif
+
+	mPmgLdxObjId :objID ; Load X with PMGOBJECTS Id
+
+	lda vsSeqEnable, X
+.endm
+
+
+;===============================================================================
+;											mPmgPlayAnim  X  Y
+;===============================================================================
+; Start the anim playing this (X) objects's Player/Missile object.
+; Note this only (re)assigns the sequence to an item on the PMGOBJECTS lists.
+; This does not actually cause a display change.
+; For the display to change the image update routine must be invoked.
+
+.macro mPmgPlayAnim objID, seqId
+	.if :0<>2
+		.error "mPmgPlayAnim: 2 arguments (object ID, sequence ID) required."
+	.endif
+
+	mPmgLdxObjId :objID ; Load X with PMGOBJECTS Id
+
+	mLDY_VM :seqId     ; Load Y with sequence number 
+
+	jsr libPmgSetSequence
+
+.endm
+
+
+;===============================================================================
+;												mPmgSetColor  X  A
+;===============================================================================
+; Set Color for a PMGOBJECTS entry.
+; This is not updating actual color registers.  
+; This only updates the color in a PMGOBJECTS list of objects.
+;
+; Object ID Number    (Address) aka Sprite number
+; Color               (Value)
+
+.macro mPmgSetColor objID,color
+	mPmgLdxObjId :objID ; Load X with PMGOBJECTS Id
 	lda #:color
 
-	jsr libPmgSetColor
-.endm
-
-;===============================================================================
-;														mPmgSetColor_MM
-;===============================================================================
-; Set Color for a player 0 to 3.
-; "Missiles" are also Player 0 to 3.
-; Any value greater than 3 will change the "fifth" player color COLOR3.
-;
-; Sprite Number    (Address)
-; Color            (Value)
-
-.macro mPmgSetColor_MM objID,color
-	ldy #:objID
-	lda :color
-
-	jsr libPmgSetColor
-.endm
-
-;===============================================================================
-;														mPmgSetColor
-;===============================================================================
-; PmgSetColor wrapper.
-;
-; If color is greater then 255, then it is an address.
-;
-; Sprite Number    (Address)
-; Color            (Value)
-
-.macro mPmgSetColor pmgNumber,color
-	.if :0<>2
-		.error "PmgSetColor: 2 arguments (P/M number, color) required."
-	.else
-		.if :color>255 ; then color is an address
-			mPmgSetColor_MM pmgNumber,color
-		.else
-			mPmgSetColor_MV pmgNumber,color
-		.endif
-	.endif
+	sta vsPmgColor,x
 .endm
 
 

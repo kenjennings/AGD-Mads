@@ -60,7 +60,6 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 ; to be determined at build time.  BUT, for the purposes of the simple
 ; demo, the values are all known at build time, so using a structure
 ; would make sense.  Have I talked myself out of anything yet?)
-
 ;
 ; objID (address)
 ; pmID

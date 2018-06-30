@@ -120,49 +120,49 @@ vsPmgRamAddrHi
 ; There is a part attached to the hardware, and a part that
 ; references the Animation sequences.
 
-vsPmgEnable    .ds PMGOBJECTS, 0   ; Object is on/1 or off/0.  If off, skip processing.
-vsPmgIdent     .ds PMGOBJECTS, $FF ; Missile 0 to 3. Player 4 to 7.  FF is unused
+vsPmgEnable    .ds PMGOBJECTSMAX, 0   ; Object is on/1 or off/0.  If off, skip processing.
+vsPmgIdent     .ds PMGOBJECTSMAX, $FF ; Missile 0 to 3. Player 4 to 7.  FF is unused
 
 ; Direct hardware relationships...
 
-vsPmgColor     .ds PMGOBJECTS, 0   ; Color of each object.
-vsPmgSize      .ds PMGOBJECTS, 0   ; HSize of object.
-vsPmgVDelay    .ds PMGOBJECTS, 0   ; VDelay (for double line resolution.)
+vsPmgColor     .ds PMGOBJECTSMAX, 0   ; Color of each object.
+vsPmgSize      .ds PMGOBJECTSMAX, 0   ; HSize of object.
+vsPmgVDelay    .ds PMGOBJECTSMAX, 0   ; VDelay (for double line resolution.)
 
-vsPmgCollideToField  .ds PMGOBJECTS, 0 ; Display code's collected M-PF or P-PF collision value.
-vsPmgCollideToPlayer .ds PMGOBJECTS, 0 ; Display code's collected M-PL or P-PL collision value.
+vsPmgCollideToField  .ds PMGOBJECTSMAX, 0 ; Display code's collected M-PF or P-PF collision value.
+vsPmgCollideToPlayer .ds PMGOBJECTSMAX, 0 ; Display code's collected M-PL or P-PL collision value.
 
-vsPmgAddrLo    .ds PMGOBJECTS, 0   ; Low Byte of objects' PMADR base
-vsPmgAddrHi    .ds PMGOBJECTS, 0   ; High Byte of objects' PMADR base
+vsPmgAddrLo    .ds PMGOBJECTSMAX, 0   ; Low Byte of objects' PMADR base
+vsPmgAddrHi    .ds PMGOBJECTSMAX, 0   ; High Byte of objects' PMADR base
 
-vsPmgHPos      .ds PMGOBJECTS, 0   ; X position of each object (logical)
-vsPmgRealHPos  .ds PMGOBJECTS, 0   ; Real X position on screen (if controls adjusts PmgHPos)
+vsPmgHPos      .ds PMGOBJECTSMAX, 0   ; X position of each object (logical)
+vsPmgRealHPos  .ds PMGOBJECTSMAX, 0   ; Real X position on screen (if controls adjusts PmgHPos)
 
 ; Still "hardware", but not registers. Just memory offsets.
 
-vsPmgVPos      .ds PMGOBJECTS, 0   ; Y coordinate of each object (logical)
-vsPmgRealVPos  .ds PMGOBJECTS, 0   ; Real Y position on screen (if controls adjusts PmgVPos)
-vsPmgPrevVPos  .ds PMGOBJECTS, 0   ; Previous Y position before move  (if controls adjusts PmgVPos)
+vsPmgVPos      .ds PMGOBJECTSMAX, 0   ; Y coordinate of each object (logical)
+vsPmgRealVPos  .ds PMGOBJECTSMAX, 0   ; Real Y position on screen (if controls adjusts PmgVPos)
+vsPmgPrevVPos  .ds PMGOBJECTSMAX, 0   ; Previous Y position before move  (if controls adjusts PmgVPos)
 
 ; Animation sequence playing . . .
 
-vsSeqIdent  .ds PMGOBJECTS, 0  ; (R) Animation ID in use
-vsSeqEnable .ds PMGOBJECTS, 0  ; (R/W) Animation is playing/1 or stopped/0
+vsSeqIdent  .ds PMGOBJECTSMAX, 0  ; (R) Animation ID in use
+vsSeqEnable .ds PMGOBJECTSMAX, 0  ; (R/W) Animation is playing/1 or stopped/0
 
-vsPmgSeqLo     .ds PMGOBJECTS, 0  ; (R) low byte of animation sequence structure in use
-vsPmgSeqHi     .ds PMGOBJECTS, 0  ; (R) high byte of animation sequence structure in use
+vsPmgSeqLo     .ds PMGOBJECTSMAX, 0  ; (R) low byte of animation sequence structure in use
+vsPmgSeqHi     .ds PMGOBJECTSMAX, 0  ; (R) high byte of animation sequence structure in use
 
-vsSeqFrameCount   .ds PMGOBJECTS, 0   ; (R) Number of frames in the animation sequence.
-vsSeqFrameIndex   .ds PMGOBJECTS, 0   ; (W) current index into frame list for this sequence.
-vsSeqFrameCurrent .ds PMGOBJECTS, 0   ; (W) current frame number.
-vsSeqFramePrev    .ds PMGOBJECTS, 0   ; (W) previous frame number. (No change means no redraw)
+vsSeqFrameCount   .ds PMGOBJECTSMAX, 0   ; (R) Number of frames in the animation sequence.
+vsSeqFrameIndex   .ds PMGOBJECTSMAX, 0   ; (W) current index into frame list for this sequence.
+vsSeqFrameCurrent .ds PMGOBJECTSMAX, 0   ; (W) current frame number.
+vsSeqFramePrev    .ds PMGOBJECTSMAX, 0   ; (W) previous frame number. (No change means no redraw)
 
-vsSeqDelay      .ds PMGOBJECTS, 0  ; (R) Number of TV frames to wait for each animation frame
-vsSeqDelayCount .ds PMGOBJECTS, 0  ; (W) Frame countdown when SeqDelay is not zero
+vsSeqDelay      .ds PMGOBJECTSMAX, 0  ; (R) Number of TV frames to wait for each animation frame
+vsSeqDelayCount .ds PMGOBJECTSMAX, 0  ; (W) Frame countdown when SeqDelay is not zero
 
-vsSeqLoop       .ds PMGOBJECTS, 0  ; (R) Does animation sequence repeat? 0/no, 1/yes
-vsSeqBounce     .ds PMGOBJECTS, 0  ; (R) Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
-vsSeqDir        .ds PMGOBJECTS, 0  ; (W) Current direction of animation progression.
+vsSeqLoop       .ds PMGOBJECTSMAX, 0  ; (R) Does animation sequence repeat? 0/no, 1/yes
+vsSeqBounce     .ds PMGOBJECTSMAX, 0  ; (R) Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
+vsSeqDir        .ds PMGOBJECTSMAX, 0  ; (W) Current direction of animation progression.
 
 ; Managing Animation Frame Bitmap Images. . .
 
@@ -256,36 +256,27 @@ vsSeqBounce   .byte 0,0,0,0,0 ; Does repeat go ABCDABCD or ABCDCBABCD (0/linear,
 libPmgInitObject
 	; The physical hardware associations. . .
 
-	lda #$00 ; Clear for later activities
 	ldx zbPmgCurrentIdent
-	; If the Player/Missile object is negative then
-	; nothing else can be set for hardware.
-	bpl bDoPmgInitObject ; Positive.  build object.
-	; Negative.  Unset some values.
-	sta zbPmgEnable
-	sta zbSeqEnable
-	beq bDoPmgInitCopyToObject
+	jsr libPmgZeroObject  ; Zero all PMOBJECTS variables.
 
-bDoPmgInitObject
-	sta zbPmgCollideToField ; Turn off any collected collision bits for the
-	sta zbPmgCollideToPlayer ; Player to Playfield and Player to Player
+	ldy zbPmgIdent
 
-	lda #$01
-	sta zbPmgEnable ; Turn ON the object.
+	; By default an initized object is all 0 values, so the
+	; object and the animation are already disabled.
 
-	lda vsPmgRamAddrLo,x ; Remember object's Player memory base address
-	sta zwPmgAddr
-	lda vsPmgRamAddrHi,x
-	sta zwPmgAddr+1
+	; The Player/Missile object is negative, so leave it disabled.  
+	bmi bDoPmgInitContinue
 
-	lda zbPmgHPos      ; init horizontal position
-	sta zbPmgRealHpos
+	; Otherwise, enable the object.
+	inc vsPmgEnable,x ; Evilness.
 
-	lda zbPmgVPos     ; init vertical position
-	sta zbPmgRealVpos
-	sta zbPrevVPos
+	; And reset the hardware-specific pointer and P/M ID:
+	jsr libPmgResetBase
 
-	; The animation data associations.
+bDoPmgInitContinue
+	jsr libPmgCopyZPToObject ; Copy remaining Zero Page values to PM object.
+
+	; Next, the animation data associations.
 
 	ldx zbSeqIdent ; Get the animation number (The Sequence)
 
@@ -299,7 +290,7 @@ bDoPmgInitObject
 
 	; If Enable is 1 then configure all for first frame
 	lda zbSeqEnable
-	beq bLPIODoDisabled ; Enable is 0.  Do something else.
+;	beq bLPIODoDisabled ; Enable is 0.  Do something else.
 
 	lda vsSeqCount,x ; Frame count for sequence
 	sta zbSeqCount
@@ -333,18 +324,81 @@ bDoPmgInitCopyToObject
 
 
 ;===============================================================================
-;												libCopyZeroToPmg  A X
+;												libPmgZeroObject  A X
 ;===============================================================================
-; Copy all the Page zero values to the current
-; Player/Missile object:
+; Zero all the PMOBJECTS variables and leave the 
+; PMOBJECT and animation disabled.
+;
+; X is the current PMOBJECT ID.
 
-libCopyZeroToPmg
+libPmgZeroObject
 
-	lda zbPmgEnable
+	lda #0
+
 	sta vsPmgEnable,x
-
-	lda zbPmgIdent
 	sta vsPmgIdent,x
+
+	sta vsPmgColor,x
+	sta vsPmgSize,x
+	sta vsPmgVDelay,x
+	sta vsPmgCollideToField,x  
+	sta vsPmgCollideToPlayer,x 
+
+	sta vsPmgAddrLo,x 
+	sta vsPmgAddrHi,x
+
+	sta vsPmgHPos,x
+	sta vsPmgRealHPos,x
+
+	sta vsPmgVPos,x
+	sta vsPmgRealVPos,x
+	sta vsPmgPrevVPos,x
+
+	sta vsSeqIdent,x
+	sta vsSeqEnable,x
+
+	sta vsSeqLo,x
+	sta vsSeqHi,x
+
+	sta vsSeqFrameCount,x
+	sta vsSeqFrameIndex,x
+	sta vsSeqFrameCurrent,x
+	sta vsSeqFramePrev,x
+
+	sta vsSeqDelay,x
+	sta vsSeqDelayCount,x
+	sta vsSeqLoop,x
+	sta vsSeqBounce,x
+	sta vsSeqDir,x
+
+	rts
+
+
+;===============================================================================
+;												libPmgResetBase  A  X  Y
+;===============================================================================
+; Repopulate the Player/Missile base address in the 
+; current PMOBJECTs (X) for the Player/Missile object (Y)
+
+libPmgResetBase
+
+	lda vsPmgRamAddrLo,y
+	sta vsPmgAddrLo,x
+	lda vsPmgRamAddrHi,y
+	sta vsPmgAddrHi,x
+
+	sty vsPmgIdent,x
+
+	rts
+
+
+;===============================================================================
+;												libPmgCopyZPToObject  A X
+;===============================================================================
+; Copy the Page zero values to the current Player/Missile object:
+; Excluding the PM/Base Address and P/M ident.
+
+libPmgCopyZPToObject
 
 	lda zbPmgColor
 	sta vsPmgColor,x
@@ -355,29 +409,19 @@ libCopyZeroToPmg
 	lda zbPmgVDelay
 	sta vsPmgVDelay,x
 
-	lda zbPmgCollideToField
-	sta vsPmgCollideToField,x
-
-	lda zbPmgCollideToPlayer
-	sta vsPmgCollideToPlayer,x
-
-	lda zwPmgAddr
-	sta vsPmgAddrLo,x ; Remember object's Player memory base address
-	lda zwPmgAddr+1
-	sta vsPmgAddrHi,x
-
 	lda zbPmgHPos
 	sta vsPmgHPos,x
-	lda zbPmgRealHPos
 	sta vsPmgRealHPos,x
 
 	lda zbPmgVPos
 	sta vsPmgVPos,x
-	lda zbPmgRealVPos
 	sta vsPmgRealVPos,x
-	lda zbPmgPrevVPos
 	sta vsPmgPrevVPos,x
 
+	rts
+
+
+	
 	lda zbSeqIdent
 	sta vsSeqIdent,x
 

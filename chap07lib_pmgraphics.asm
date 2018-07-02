@@ -149,20 +149,20 @@ vsPmgPrevVPos  .ds PMGOBJECTSMAX, 0   ; Previous Y position before move  (if con
 vsSeqIdent  .ds PMGOBJECTSMAX, 0  ; (R) Animation ID in use
 vsSeqEnable .ds PMGOBJECTSMAX, 0  ; (R/W) Animation is playing/1 or stopped/0
 
-vsPmgSeqLo     .ds PMGOBJECTSMAX, 0  ; (R) low byte of animation sequence structure in use
-vsPmgSeqHi     .ds PMGOBJECTSMAX, 0  ; (R) high byte of animation sequence structure in use
+vsSeqLo     .ds PMGOBJECTSMAX, 0  ; (R) low byte of animation sequence structure in use
+vsSeqHi     .ds PMGOBJECTSMAX, 0  ; (R) high byte of animation sequence structure in use
 
 vsSeqFrameCount   .ds PMGOBJECTSMAX, 0   ; (R) Number of frames in the animation sequence.
 vsSeqFrameIndex   .ds PMGOBJECTSMAX, 0   ; (W) current index into frame list for this sequence.
 vsSeqFrameCurrent .ds PMGOBJECTSMAX, 0   ; (W) current frame number.
 vsSeqFramePrev    .ds PMGOBJECTSMAX, 0   ; (W) previous frame number. (No change means no redraw)
 
-vsSeqDelay      .ds PMGOBJECTSMAX, 0  ; (R) Number of TV frames to wait for each animation frame
+vsSeqFrameDelay      .ds PMGOBJECTSMAX, 0  ; (R) Number of TV frames to wait for each animation frame
 vsSeqDelayCount .ds PMGOBJECTSMAX, 0  ; (W) Frame countdown when SeqDelay is not zero
 
-vsSeqLoop       .ds PMGOBJECTSMAX, 0  ; (R) Does animation sequence repeat? 0/no, 1/yes
-vsSeqBounce     .ds PMGOBJECTSMAX, 0  ; (R) Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
-vsSeqDir        .ds PMGOBJECTSMAX, 0  ; (W) Current direction of animation progression.
+vsSeqFrameLoop       .ds PMGOBJECTSMAX, 0  ; (R) Does animation sequence repeat? 0/no, 1/yes
+vsSeqFrameBounce     .ds PMGOBJECTSMAX, 0  ; (R) Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
+vsSeqFrameDir        .ds PMGOBJECTSMAX, 0  ; (W) Current direction of animation progression.
 
 ; Managing Animation Frame Bitmap Images. . .
 
@@ -209,14 +209,14 @@ vsSeq3 .byte 3 ; Enemy 2 animation image (frame number 3)
 
 vsSeq4 .byte 4,5,6,7,8,0 ; Explosion animation images (frame numbers 4 to 8, and then blank)
 
-vsSeqLo ; Low byte of address of each animation frame sequence.
+vsSeqAnimLo ; Low byte of address of each animation frame sequence.
 	.byte <vsSeq0 ; Blankitty-blank
 	.byte <vsSeq1 ; Player
 	.byte <vsSeq2 ; Enemy 1
 	.byte <vsSeq3 ; Enemy 2
 	.byte <vsSeq4 ; Explosion
 
-vsSeqHi ; Low byte of address of each animation frame sequence.
+vsSeqAnimHi ; Low byte of address of each animation frame sequence.
 	.byte >vsSeq0 ; Blankitty-blank
 	.byte >vsSeq1 ; Player
 	.byte >vsSeq2 ; Enemy 1
@@ -262,7 +262,7 @@ libPmgInitObject
 	ldy zbPmgIdent
 
 	; By default an initized object is all 0 values, so the
-	; object and the animation are already disabled.
+	; object is already disabled.
 
 	; The Player/Missile object is negative, so leave it disabled.  
 	bmi bDoPmgInitContinue
@@ -270,55 +270,61 @@ libPmgInitObject
 	; Otherwise, enable the object.
 	inc vsPmgEnable,x ; Evilness.
 
-	; And reset the hardware-specific pointer and P/M ID:
+	; And reset the hardware-specific pointer and P/M ID
 	jsr libPmgResetBase
 
+	; Copy the remaining Zero Page values to P/M object.
 bDoPmgInitContinue
-	jsr libPmgCopyZPToObject ; Copy remaining Zero Page values to PM object.
+	jsr libPmgCopyZPToObject 
 
 	; Next, the animation data associations.
+	; Even though the hardware P/M object may be 
+	; disabled, the animation will still be set up and
+	; the enable flag updated to whatever was given as
+	; the initialization argument.  However, the animation
+	; will not be evaluated or displayed when the P/M
+	; object is disabled.
 
-	ldx zbSeqIdent ; Get the animation number (The Sequence)
-
-	lda vsSeqLo,x       ; Collect the sequence address.
-	sta zwSeqAddr
-	lda vsSeqHi,x
-	sta zwSeqAddr+1
-
-	lda vsSeqCount,x ; Copy Sequence frame count
-	sta zbSeqCount
-
-	; If Enable is 1 then configure all for first frame
 	lda zbSeqEnable
-;	beq bLPIODoDisabled ; Enable is 0.  Do something else.
+	sta vsSeqEnable,x
 
-	lda vsSeqCount,x ; Frame count for sequence
-	sta zbSeqCount
+	lda zbSeqIdent
+	sta vsSeqIdent,x
+
+	tay ; Now Y = sequence index.   
+	
+	; Pick up sequence parameters, put in PMOBJECTs
+
+	lda vsSeqAnimLo,y ; Collect the sequence address.
+	sta vsSeqLo,x
+	sta zwFrameAddr   ; Save to reference later
+	lda vsSeqAnimHi,y
+	sta vsSeqHi,x 
+	sta zwFrameAddr+1
+
+	lda vsSeqCount,y ; Copy Sequence frame count
+	sta vsSeqFrameCount,x ; Frame count for sequence
 
 	lda #0
-	sta zbSeqFrameIndex ; Set animation index in sequence to 0.
+	sta vsSeqFrameIndex,x ; Set animation index from sequence to 0.
 
-	tay ; Actual frame numbers
-	lda (zwSeqAddr),y
-	sta zbSeqFrameCurrent
-	sta zbSeqFramePrev
+	lda vsSeqDelay,y
+	sta vsSeqFrameDelay,x
+	sta vsSeqDelayCount,x
 
-	lda vsSeqDelay,x
-	sta zbSeqDelay
-	sta zbSeqDelayCount
+	lda vsSeqLoop,y
+	sta vsSeqFrameLoop,x
 
-	lda vsSeqLoop,x
-	sta zbSeqLoop
+	lda vsSeqBounce,y
+	sta vsSeqFrameBounce,x
 
-	lda vsSeqBounce,x
-	sta zbSeqBounce
+	ldy #0
+	sty vsSeqFrameDir,x 
 
-	lda vsSeqDir,x
-	sta zbSeqDir
+	lda (zwFrameAddr),y ; Get frame number 0 in this index.
 
-bDoPmgInitCopyToObject
-	ldx zbPmgCurrentIdent
-	jsr libCopyZeroToPmg
+	sta vsSeqFrameCurrent,x ; And set current frame to same.
+	sta vsSeqFramePrev,x    ; and set previous frame to same.
 
 	rts
 
@@ -365,11 +371,11 @@ libPmgZeroObject
 	sta vsSeqFrameCurrent,x
 	sta vsSeqFramePrev,x
 
-	sta vsSeqDelay,x
+	sta vsSeqFrameDelay,x
 	sta vsSeqDelayCount,x
-	sta vsSeqLoop,x
-	sta vsSeqBounce,x
-	sta vsSeqDir,x
+	sta vsSeqFrameLoop,x
+	sta vsSeqFrameBounce,x
+	sta vsSeqFrameDir,x
 
 	rts
 
@@ -417,48 +423,6 @@ libPmgCopyZPToObject
 	sta vsPmgVPos,x
 	sta vsPmgRealVPos,x
 	sta vsPmgPrevVPos,x
-
-	rts
-
-
-	
-	lda zbSeqIdent
-	sta vsSeqIdent,x
-
-	lda zbSeqEnable
-	sta vsSeqEnable,x
-
-	lda zwSeqAddr
-	sta vsSeqLo,x
-	lda zwSeqAddr+1
-	sta vsSeqHi,x
-
-	lda zbSeqFrameCount
-	sta vsSeqFrameCount,x
-	lda zbSeqFrameIndex
-	sta vsSeqFrameIndex,x
-	lda zbSeqFrameCurrent
-	sta vsSeqFrameCurrent,x
-	lda zbSeqFramePrev
-	sta vsSeqFramePrev,x
-
-	lda zbSeqDelay
-	sta vsSeqDelay,x
-
-	lda zbSeqDelayCount
-	sta vsSeqDelayCount,x
-
-	lda zbSeqLoop
-	sta vsSeqLoop,x
-
-	lda zbSeqBounce
-	sta vsSeqBounce,x
-
-	lda zbSeqDir
-	sta vsSeqDir,x
-
-;zwFrameAddr
-;zwFrameHeight
 
 	rts
 

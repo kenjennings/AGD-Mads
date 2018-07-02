@@ -97,15 +97,21 @@ zbSeqLoop   .byte 0   ; (R) Does animation sequence repeat? 0/no, 1/yes
 zbSeqBounce .byte 0   ; (R) Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1/bounce)
 zbSeqDir    .byte 0   ; (W) Current direction of animation progression. + or -
 
+
+	ORG  $FC
+
+; Forcing these to end of page 0 puts Pmg Ident at $FF,
+; Therefore the non-Page 0 memeory values can be $00 to
+; $FE.  (theoreticall) 
+; This means the real (theoretical) list of working 
+; PMOBJECTS could be numbered from 0 to $FE (254).
 ; Animation frame bitmap/graphics management...
 ; FYI "frame ID" numbers belong to the sequence management.
 
 zwFrameAddr    .word 0   ; (R) Address of current image frame
 zwFrameHeight  .byte 0   ; (R) Height of current image frame.
 
-; Forcing this to end of page 0 at location $FF.
-; This means the real (theoretical) list of working 
-; PMOBJECTS could be numbered from 0 to $FE (254).
+
 
 	ORG $FF
 

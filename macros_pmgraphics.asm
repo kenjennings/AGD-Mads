@@ -114,7 +114,7 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 	sta zbPmgVPos; Lib will copy to zbPmgRealVPos and zbPmgPrevVPos
 
 	mLDA_VM :animID
-	sta zbPmgSeqIdent
+	sta zbSeqIdent
 
 	mLDA_VM :animEnable
 	sta zbSeqEnable

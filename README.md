@@ -9,9 +9,21 @@ The game designs for Atari duplicate the 25 text lines standard with the C64.  T
 
 ---
 
-The 6502 is the same between platforms.  Basic logic, math, and such are identical in the programs.  The differences come from the hardware usage which is sometimes significant.  Generally speaking: 
+The 6502 is the same between platforms.  Basic logic, math, and such are identical in the programs.  Generally speaking some graphics features are similar:
 
-- The C64 has a 16-color palette and partly uses a color map to apply colors, and partially uses indirection through color registers.  The Atari has a 128-color palette and uses color registers/indirection for everything on the display, and can optionally combine sprite and playfield colors to produce extra colors.  This makes the systems vary in how to apply color, and how much color can be displayed on the same line. 
+- The actual bitmap arrangement of data for high-res and multi-color character sets is the same on the C64 as the Atari (Eight bytes per character, one byte/eight bits per each scan line from top to bottom, leftmost bit is the high bit,  or for multi-color fonts the eight bits are divided into four pairs of bits where each bit pair describes one of four color values.)
+
+- The C64 and Atari have corresponding screen resolution modes.  Both can support a one-bit pixel for 320 horizonal pixels on a line, or two-bit pixels for 160 horizontal pixels on a line.
+
+- Text screen memory is linear on both (1000 contiguous characters.)
+
+- Both use the same Atari 2600-compatible digital joysticks with four directional bits corresponding to up, down, left, right, and a bit for Fire.
+
+- Both support fine scrolling text displays. 
+
+More detailed and rigorous use of the hardware features increase the distance of the differences, sometimes significantly:
+
+- The C64 has a 16-color palette and partially uses a color map to apply colors, and partially uses indirection through color registers.  The Atari has a 128-color palette and uses color registers/indirection for everything on the display, and can optionally combine sprite and playfield colors to produce extra colors.  This makes the systems vary in how to apply color, and how much color can be displayed on the same line. 
 
 - The C64 "Sprites" have more horizontal resolution than the Atari's "Player/Missile" graphics which have more vertical resolution.  Both have different memory organization.  Multi-color objects are done differently.
 
@@ -21,23 +33,11 @@ The 6502 is the same between platforms.  Basic logic, math, and such are identic
 
 - Bitmapped graphics on the C64 uses memory organized like a character set where the Atari uses linear memory for a line of graphics.
 
-- Both systems have 256 characters in a font, where the C64 defines a 2K bitmap for all 256 characters, and the Atari defines a 1K bitmap for 128 characters with the subsequent 128 characters automatically displayed in reverse video.  Character order also differs in the character sets.
+- Both systems have 256 characters in a font, though the C64 defines a 2K bitmap for all 256 characters, and the Atari defines a 1K bitmap for 128 characters with the subsequent 128 characters automatically displayed in reverse video.  Character order also differs in the character sets.
 
 - The C64 has three sound voices with automatic volume envelopes where the Atari has four voices.
 
-Some things are similar:
-
-- The actual bitmap arrangement of data for high-res and multi-color character sets is the same for the C64 and the Atari (Eight bytes per character, one byte/eight bits per each scan line from top to bottom, leftmost bit is the high bit,  or for multi-color fonts the eight bits are divided into four pairs of bits where each bit pair describes one of four color values.)
-
-- The C64 and Atari have corresponding screen resolution modes.  Both can support a one-bit pixel for 320 horizonal pixels on a line, or two-bit pixels for 160 horizontal pixels on a line.
-
-- Text screen memory is linear on both (1000 contiguous characters.)
-
-- Both use the same Atari 2600-compatible digital joysticks with four directional bits corresponding to up, down, left, right.
-
-- Both support fine scrolling text displays.
-
-Therefore, some things just don't port directly.  Things will be different.  Each computer may require alternate methods to create visually similar results.   Where the C64 uses a sprite, it may make more sense on the Atari to use characters.  The Atari's graphic chip makes it very easy to mix different text and graphics modes without any special 6502 code considerations, where the C64 would require a design compromise, or doing more complicated code to create interrupts to manage the display.
+Therefore, some things just don't always port directly.  The code will be different.  Each computer may require alternate methods to create visually similar results.   Where the C64 uses a sprite, it may make more sense on the Atari to use characters.  On the Atari's side the graphic chip makes it very easy to mix different text and graphics modes without any special 6502 code considerations, where the C64 would require a design compromise, or doing more complicated code to create interrupts to manage the display.
 
 ---
 

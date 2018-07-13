@@ -5,7 +5,7 @@ Atari Game Development (MADS Assembler Version)
 
 Ported (or parodied depending on opinion) from the book "Retro Game Development - C64 Edition".
 
-The game designs for Atari duplicate the 25 text lines standard with the C64.  The programs leverage the Atari's flexible graphics to optionally provide two extra lines for runtime diagnostics (one line above the normal display, and one line below.)  The diagnostic support can be turned on and off by defining the value DO_DIAG=1.
+The game designs for Atari duplicate the 25 text lines standard with the C64.  The programs leverage the Atari's flexible graphics to optionally provide two extra lines for runtime diagnostics (one line above the normal display, and one line below.)  The diagnostic support can be turned on and off by defining the value DO_DIAG=1 when assembling the programs.
 
 ---
 

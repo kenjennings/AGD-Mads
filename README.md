@@ -13,13 +13,13 @@ The 6502 is the same between platforms.  Basic logic, math, and such are identic
 
 - The actual bitmap arrangement of data for high-res and multi-color character sets is the same on the C64 as the Atari (Eight bytes per character, one byte/eight bits per each scan line from top to bottom, leftmost bit is the high bit,  or for multi-color fonts the eight bits are divided into four pairs of bits where each bit pair describes one of four color values.)
 
-- The C64 and Atari have corresponding screen resolution modes.  Both can support a one-bit pixel for 320 horizonal pixels on a line, or two-bit pixels for 160 horizontal pixels on a line.
+- The C64 and Atari have some corresponding screen resolution modes.  Both can support a one-bit pixel for 320 horizonal pixels on a line, or two-bit pixels for 160 horizontal pixels on a line.
 
 - Text screen memory is linear on both (1000 contiguous characters.)
 
 - Both use the same Atari 2600-compatible digital joysticks with four directional bits corresponding to up, down, left, right, and a bit for Fire.
 
-- Both support fine scrolling text displays. 
+- Both support fine scrolling text displays, though the distance of scolling varies between the two.
 
 More detailed and rigorous use of the hardware features increase the distance of the differences, sometimes significantly:
 
@@ -27,9 +27,9 @@ More detailed and rigorous use of the hardware features increase the distance of
 
 - The C64 "Sprites" have more horizontal resolution than the Atari's "Player/Missile" graphics which have more vertical resolution.  Both have different memory organization.  Multi-color objects are done differently.
 
-- The C64's VIC-II video chip has four choices of video banks providing fixed memory addresses for text, graphics, and sprites.  The Atari's ANTIC video chip can reference all of the 16-bit address space in the system for playfield displays, and Player/Missile graphics, etc.
+- The C64's VIC-II video chip has four choices of video banks providing fixed memory addresses for text, graphics, and sprites.  The Atari's ANTIC video chip can reference all of the 16-bit address space in the system for playfield displays, and Player/Missile graphics, text, etc.
 
-- The C64 supports a couple kinds of text displays, and a couple graphics modes. The Atari has 14 basic display modes: six text modes with four kinds of character representation, and eight graphics modes.  The 14 display modes can be presented using four kinds of color interpretation methods. 
+- The C64 supports a couple kinds of text displays, and a couple graphics modes. The Atari has 14 display modes: six text modes with four kinds of character representation, and eight graphics modes.  The 14 display modes can be presented using four kinds of color interpretation methods. 
 
 - Bitmapped graphics on the C64 uses memory organized like a character set where the Atari uses linear memory for a line of graphics.
 

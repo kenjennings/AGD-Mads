@@ -492,15 +492,15 @@ setHPosSkipOffset
 
 	; The linked object needs to be updated, but the current X
 	; is the current object ID, not the linked object ID. 
-	; Changing X would mess up every function that follows 
-	; which expects X to be the current object ID.
+	; Changing X would disrupt up every function that follows 
+	; each expecting X to be the current object ID.
 	; Page 0 to the rescue -- zbPmgCurrentIdent.  This is set 
 	; by the main code for the current object, and should not 
 	; be changed by the library.  Therefore, the code can change 
-	; X to pick a new object, and then later return to the 
+	; X to pick a new object, and then later return X to the 
 	; current object.
 
-	ldx vsPmgChainIdent,x
+	ldx vsPmgChainIdent,x  ; Move to chained object.
 
 	; The A register contains the current object's "Real" HPos.
 	; This becomes the linked object's logical HPos to be offset.
@@ -510,8 +510,8 @@ setHPosSkipOffset
 	; linked based on the current state of the 6502 stack.
 
 	; A non-recursive, but still looping version does the same
-	; successfully without blowing up due to unknown and 
-	; possibly variable hardware conditions.
+	; successfully without blowing up due to possibly variable 
+	; hardware conditions.
 
 	jmp libPmgSetHPos
 
@@ -535,6 +535,9 @@ libPmgSetColor
 
 	sta vsPmgColor,x
 
+	; if this object is chained, should it also change the linked object?
+	; Maybe add that later.
+
 	rts
 
 
@@ -551,6 +554,10 @@ libPmgSetColor
 libPmgSetFrame
 
 	sta vsPmgCurrentFrame,x
+
+	; if this object is chained, should it also change the linked object?
+	; Maybe add that later.  It could only adjust this if both parts have
+	; the same number of frames.
 
 	jsr redraw
 

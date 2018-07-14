@@ -23,6 +23,19 @@ zbHigh2  .byte 0
 zwAddr1 = zbLow
 zwAddr2 = zbLow2
 
+
+;===============================================================================
+; lib_input.asm needs these values below.
+zbGameportLastFrame .byte 0
+zbGameportThisFrame .byte 0
+zbGameportDiff      .byte 0
+zbTriggerLastFrame  .byte 0
+zbTriggerThisFrame  .byte 0
+zbTriggerDiff       .byte 0
+zbFireDelay         .byte 0
+zbFireBlip          .byte 1 ; reversed logic to match other input
+
+
 ;===============================================================================
 ; lib_screen.asm wants these values below.
 ; Declare here in page 0 for better performance.

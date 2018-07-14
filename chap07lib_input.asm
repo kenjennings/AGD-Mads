@@ -13,16 +13,16 @@
 
 
 ;===============================================================================
-; Variables
+; Variables -- See Page 0 memory
 
-vbGameportLastFrame .byte 0
-vbGameportThisFrame .byte 0
-vbGameportDiff      .byte 0
-vbTriggerLastFrame  .byte 0
-vbTriggerThisFrame  .byte 0
-vbTriggerDiff       .byte 0
-vbFireDelay         .byte 0
-vbFireBlip          .byte 1 ; reversed logic to match other input
+; vbGameportLastFrame .byte 0
+; vbGameportThisFrame .byte 0
+; vbGameportDiff      .byte 0
+; vbTriggerLastFrame  .byte 0
+; vbTriggerThisFrame  .byte 0
+; vbTriggerDiff       .byte 0
+; vbFireDelay         .byte 0
+; vbFireBlip          .byte 1 ; reversed logic to match other input
 
 
 ;===============================================================================
@@ -35,25 +35,25 @@ vbFireBlip          .byte 1 ; reversed logic to match other input
 libInputUpdate
 
 	lda JOYSTICKREGISTER
-	sta vbGameportThisFrame
-	eor vbGameportLastFrame
-	sta vbGameportDiff
+	sta zbGameportThisFrame
+	eor zbGameportLastFrame
+	sta zbGameportDiff
 
 	lda TRIGGERREGISTER
-	sta vbTriggerThisFrame
-	eor vbTriggerLastFrame
-	sta vbTriggerDiff
+	sta zbTriggerThisFrame
+	eor zbTriggerLastFrame
+	sta zbTriggerDiff
         
-	lda vbFireDelay
+	lda zbFireDelay
 	beq bIUDelayZero
-	dec vbFireDelay
+	dec zbFireDelay
+	
 bIUDelayZero
+	lda zbGameportThisFrame
+	sta zbGameportLastFrame
 
-	lda vbGameportThisFrame
-	sta vbGameportLastFrame
-
-	lda vbTriggerThisFrame
-	lda vbTriggerLastFrame
+	lda zbTriggerThisFrame
+	lda zbTriggerLastFrame
 
 	rts
 
@@ -70,39 +70,39 @@ bIUDelayZero
 libInput_GetFirePresed
 
 	lda #1
-	sta vbFireBlip ; clear Fire flag
+	sta zbFireBlip ; clear Fire flag
 
 	; is fire held?
-	lda vbTriggerThisFrame
+	lda zbTriggerThisFrame
 	and #GAMEPORTFIREMASK
 	bne bNotHeld
 
 bHeld
 	; is this 1st frame?
-	lda vbTriggerDiff
+	lda zbTriggerDiff
 	and #GAMEPORTFIREMASK
         
 	beq bNotFirst
 	lda #0
-	sta vbFireBlip ; Fire
+	sta zbFireBlip ; Fire
 
 	; reset delay
 	lda #FIREDELAYMAX
-	sta vbFireDelay        
-bNotFirst
+	sta zbFireDelay 
 
+bNotFirst
 	; is the delay zero?
-	lda vbFireDelay
+	lda zbFireDelay
 	bne bNotHeld
 	lda #0
-	sta vbFireBlip ; Fire
+	sta zbFireBlip ; Fire
 
 	; reset delay
 	lda #FIREDELAYMAX
-	sta vbFireDelay   
+	sta zbFireDelay   
         
 bNotHeld 
-	lda vbFireBlip
+	lda zbFireBlip
 
 	rts
 

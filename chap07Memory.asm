@@ -45,23 +45,26 @@ screenScrollXValue .byte 0
 ; Individual values Set... directly in PMGOBJECTS will not cause the object 
 ; to be redrawn.  Redraw is done only in animation processing.
 
-zbPmgEnable        .byte 0   ; Object is on/1 or off/0.  If off, skip processing.
+zbPmgEnable      .byte 0   ; Object is on/1 or off/0.  If off, skip processing.
 
 ; Direct Player/Missile hardware relationships...
 
-zbPmgIdent         .byte $FF ; Missile 0 to 3. Player 4 to 7.  FF is unused
+zbPmgIdent       .byte $FF ; Missile 0 to 3. Player 4 to 7.  FF is unused
 
-zbPmgColor         .byte 0   ; Color of each object.
-zbPmgSize          .byte 0   ; HSize of object.
-zbPmgVDelay        .byte 0   ; VDelay (for double line resolution.)
+zbPmgColor       .byte 0   ; Color of each object.
+zbPmgSize        .byte 0   ; HSize of object.
+zbPmgVDelay      .byte 0   ; VDelay (for double line resolution.)
 
-zbPmgHPos          .byte 0   ; X position of each object (logical)
-zbPmgVPos          .byte 0   ; Y coordinate of each object (logical)
+zbPmgHPos        .byte 0   ; X position of each object (logical)
+zbPmgVPos        .byte 0   ; Y coordinate of each object (logical)
+
+zbPmgChainIdent  .byte 0   ; Object ID of chained object.
+zbPmgChainOffset .byte 0   ; X offset for the chained P/M Object
 
 ; Animation sequence assignment
 
-zbSeqIdent     .byte 0   ; (R) Animation (sequence) ID in use
-zbSeqEnable    .byte 0   ; (W) Animation is Playing/1 or Paused/0
+zbSeqIdent       .byte 0   ; (R) Animation (sequence) ID in use
+zbSeqEnable      .byte 0   ; (W) Animation is Playing/1 or Paused/0
 
 
 ; TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD TBD 
@@ -95,13 +98,13 @@ zbSeqEnable    .byte 0   ; (W) Animation is Playing/1 or Paused/0
 
 ; objects' P/M base. Use as: lda (zwPmgAddr),zbPmgRealVPos [as Y]
 
-zwPmgAddr .word 0 
+zwPmgAddr     .word 0 
 
 ; Animation frame bitmap/graphics management...
 ; FYI "frame ID" numbers belong to the sequence management.
 
-zwFrameAddr    .word 0   ; (R) Address of current image frame
-zwFrameHeight  .byte 0   ; (R) Height of current image frame.
+zwFrameAddr   .word 0   ; (R) Address of current image frame
+zwFrameHeight .byte 0   ; (R) Height of current image frame.
 
 
 ; Forcing Pmg Ident to end of page 0, address $FF.  Therefore, the 
@@ -118,7 +121,7 @@ zwFrameHeight  .byte 0   ; (R) Height of current image frame.
 
 	ORG $FF
 
-zbPmgCurrentIdent  .byte 0   ; current index number for PMGOBJECTS
+zbPmgCurrentIdent .byte 0   ; current index number for PMGOBJECTS
 
 
 ;===============================================================================

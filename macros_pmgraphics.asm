@@ -14,6 +14,9 @@ PMGOBJECTSMAX = 16 ; Mostly arbitrary.  In theory, up to 255.
                  ; corresponding to the zbPmgCurrentIdent zero page 
                  ; addressed cannot be referenced directly.
 
+PMGNOOBJECT   = $FF ; a symbol to represent an object ID that
+                    ; is not a valid object ID.
+
 ANIMSEQMAX    = 5  ; Number of Animation sequences managed.  
 
 SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
@@ -49,17 +52,20 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 ;														mPmgInitObject
 ;===============================================================================
 ; Setup an on-screen object for the first time.
-; Sets values in Page 0 structure for animation.
+; Sets values in structure for animation.
 ; Call the library init to complete setup, and copy the page zero info
 ; into the PMGOBJECTS lists.
-; (Everything is done here through Page 0 to make the macro and its 9 
+;
+; Everything is passed here through Page 0 to make the macro and its 9 
 ; arguments less memory abusive.  The alternative would be to 
 ; declare a populated structure of all the arguments and pass that
-; by its address.  The macro method allows for addresses to variables,
-; so it is more flexible than a declred structure which would have 
-; to be determined at build time.  BUT, for the purposes of the simple
-; demo, the values are all known at build time, so using a structure
-; would make sense.  Have I talked myself out of anything yet?)
+; by its address.  (Hmm, that actually does sound more-ish clever-like 
+; than what is being done here.)  The macro method allows for addresses 
+; to variables, so it is more flexible than a declred structure which 
+; would still have to be determined at build time.  BUT, for the 
+; purposes of the simple demo games, the values are all known at build 
+; time, so using a structure would make sense.  Have I talked myself 
+; out of anything yet?)
 ;
 ; objID (address)
 ; pmID
@@ -68,18 +74,21 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 ; vDelay
 ; hPos
 ; vPos
+; chainID (obj ID, $FF for no chain)
+; chainOffset  (Add to hPos if this object is chained.)
 ; animID
 ; animEnable
 ;
-; Since the purpose of the library call is to initialize a page zero
-; memory structure for the object, it doesn't make much sense to accommodate
-; arguments as page 0 addresses other than the object ID itself.
-; Therefore, all argument value greater than 255 are assumed to be
+; The purpose of the library call is to initialize an entry into multiple
+; memory structures for the object.  It should be called directly, and 
+; ideally only once per object creation. it doesn't make much sense 
+; to accommodate arguments as page 0 addresses other than the object ID 
+; itself. Therefor, all argument value greater than 255 are assumed to be
 ; addresses and everything else byte-sized is assumed to be a literal value.
 
-.macro mPmgInitObject objID,pmID,color,size,vDelay,hPos,vPos,animID,animEnable
+.macro mPmgInitObject objID,pmID,color,size,vDelay,hPos,vPos,chainID,chainOffset,animID,animEnable
 	.if :0<>9
-		.error "PmgInitObject: 9 arguments (object ID, P/M ID, color, size, vDelay, hPos, vPos, animation ID, animation Enable) required."
+		.error "PmgInitObject: 11 arguments (object ID, P/M ID, color, size, vDelay, hPos, vPos, chain ID, chain Offset, animation ID, animation Enable) required."
 	.endif
 
 	; This allows the caller to iterate through objects using
@@ -113,6 +122,12 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 	mLDA_VM :vPos
 	sta zbPmgVPos; Lib will copy to zbPmgRealVPos and zbPmgPrevVPos
 
+	mLDA_VM :chainID
+	sta zbPmgChainIdent
+
+	mLDA_VM :chainOffset 
+	sta zbPmgChainOffset
+
 	mLDA_VM :animID
 	sta zbSeqIdent
 
@@ -120,6 +135,28 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 	sta zbSeqEnable
 
 	jsr libPmgInitObject
+.endm
+
+
+;===============================================================================
+;														mPmgSetHPos  X A
+;===============================================================================
+; Set the Object Horizontal position.
+; If this object has a chain offset, then add the offset for the real position.
+; If this object is chained then the library will update the chained object.  
+; and if that is chained, then the same, so on. 
+
+.macro mPmgSetHPos objId, hPos
+	.if :0<>2
+		.error "PmgSetHPos: 2 arguments (object ID, hPos) required."
+	.endif
+
+	mPmgLdxObjId :objID ; Load X with PMGOBJECTS Id
+
+	mLDA_VM :hPos ; Load A with logical horizontal position
+
+	jsr libPmgSetHPos
+	
 .endm
 
 

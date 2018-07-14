@@ -33,7 +33,8 @@ PMG_RES=PM_1LINE_RESOLUTION
 
 	icl "macros.asm"
 	icl "macros_screen.asm"
-	icl "macros_math.asm"
+	icl "macros_pmgraphics.asm"
+	icl "macros_input.asm"
 
 .if DO_DIAG=1
 	icl "macros_diag.asm"

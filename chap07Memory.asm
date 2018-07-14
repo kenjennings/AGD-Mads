@@ -65,14 +65,16 @@ zbPmgEnable      .byte 0   ; Object is on/1 or off/0.  If off, skip processing.
 zbPmgIdent       .byte $FF ; Missile 0 to 3. Player 4 to 7.  FF is unused
 
 zbPmgColor       .byte 0   ; Color of each object.
-zbPmgSize        .byte 0   ; HSize of object.
+zbPmgSize        .byte 0   ; HSize of object.  (Use GTIA.asm PM_SIZE_*)
 zbPmgVDelay      .byte 0   ; VDelay (for double line resolution.)
 
 zbPmgHPos        .byte 0   ; X position of each object (logical)
 zbPmgVPos        .byte 0   ; Y coordinate of each object (logical)
 
 zbPmgChainIdent  .byte 0   ; Object ID of chained object.
-zbPmgChainOffset .byte 0   ; X offset for the chained P/M Object
+zbPmgXOffset     .byte 0   ; X offset of HPos (typically for a chained P/M object)
+zbPmgYOffset     .byte 0   ; Y offset of VPos (typically for a chained P/M object)
+
 
 ; Animation sequence assignment
 

@@ -149,8 +149,8 @@ vsPmgRealVPos        .ds PMGOBJECTSMAX, 0 ; Real Y position on screen (if logic 
 vsPmgPrevVPos        .ds PMGOBJECTSMAX, 0 ; Previous Real Y position before move  (if controls adjusts PmgVPos)
 
 vsPmgChainIdent      .ds PMGOBJECTSMAX, 0 ; Object ID of next object linked to this. 
-vsPmgChainOffset     .ds PMGOBJECTSMAX, 0 ; X Offset if this is chained. Real x/HPOS
-
+vsPmgXOffset         .ds PMGOBJECTSMAX, 0 ; X offset of HPos (typically for a chained P/M object)
+vsPmgYOffset         .ds PMGOBJECTSMAX, 0 ; Y offset of VPos (typically for a chained P/M object)
 ; Animation sequence playing . . .
 
 vsSeqIdent           .ds PMGOBJECTSMAX, 0 ; (R) Animation ID in use
@@ -329,6 +329,9 @@ libPmgZeroObject
 	sta vsPmgRealVPos,x
 	sta vsPmgPrevVPos,x
 
+	sta vsPmgXOffset,x
+	sta vsPmgYOffset,x
+
 	sta vsSeqIdent,x
 	sta vsSeqEnable,x
 
@@ -346,6 +349,9 @@ libPmgZeroObject
 	sta vsSeqFrameBounce,x
 	sta vsSeqFrameDir,x
 
+	lda #PMGNOOBJECT      ; This non-value is not a 0 value.
+	sta vsPmgChainIdent,x
+	
 	rts
 
 
@@ -388,15 +394,25 @@ libPmgCopyZPToObject
 	lda zbPmgVDelay
 	sta vsPmgVDelay,x
 
-	lda zbPmgHPos
+	lda zbPmgHPos      ; For the time being the X offset is not added
 	sta vsPmgHPos,x
 	sta vsPmgRealHPos,x
+	sta vsPmgPrevHPos,x
 
-	lda zbPmgVPos
+	lda zbPmgVPos      ; For the time being the Y offset is not added
 	sta vsPmgVPos,x
 	sta vsPmgRealVPos,x
 	sta vsPmgPrevVPos,x
 
+	lda zbPmgChainIdent
+	sta vsPmgChainIdent,x
+	
+	lda zbPmgXOffset
+	sta vsPmgXOffset,x
+	
+	lda zbPmgYOffset
+	sta vsPmgYOffset,x
+	
 	rts
 
 
@@ -477,11 +493,11 @@ libPmgSetHPos
 	
 	sta vsPmgHPos, x       ; Save the passed value as the logical value
 
-	ldy vsPmgChainOffset,x ; Does this object have a chain offset?
+	ldy vsPmgXOffset,x     ; Does this object have an offset?
 	beq setHposSkipOffset  ; No, skip the manipulation
 
 	clc                    ; Yes.
-	adc vsPmgChainOffset,x ; Offset the position.    
+	adc vsPmgXOffset,x     ; Offset the position.    
 
 setHPosSkipOffset
 	sta vsPmgRealHPos, x   ; Save new (adjusted value) as the real position 
@@ -516,6 +532,54 @@ setHPosSkipOffset
 	jmp libPmgSetHPos
 
 exitSetHPos
+	ldx zbPmgCurrentIdent ; restore the possibly destroyed X value
+
+	rts
+
+
+;===============================================================================
+;														PmgSetVPos  X A
+;===============================================================================
+; Set the Object Vertical position.
+; (Here animation code could optionally vector to churn VPOS to real HPOS.)
+; If this object has a chain offset, then update the chained object.  
+; and if that is chained, then the same, so on. 
+;
+; X  = the current PMOBJECT ID.  
+; A  = the logical vPos
+
+libPmgSetVPos 
+
+	ldy vsPmgRealVPos,x    ; Get the old (real hardware) value and save it for 
+	sty vsPmgPrevVPos,x    ; animation code to make decisions about changes. 
+	
+	sta vsPmgVPos, x       ; Save the passed value as the logical value
+
+	ldy vsPmgYOffset,x     ; Does this object have an offset?
+	beq setHposSkipOffset  ; No, skip the manipulation
+
+	clc                    ; Yes.
+	adc vsPmgChainOffset,x ; Offset the position.    
+
+setVPosSkipOffset
+	sta vsPmgRealVPos, x   ; Save new (adjusted value) as the real position 
+
+	ldy vsPmgChainIdent,x  ; Is this chained to another object?
+	cpy #PMGNOOBJECT
+	beq exitSetVPos        ; Ident $FF means no link.
+
+	; The linked object needs to be updated.
+	; The code can change X to pick a new object, and then later 
+	; return X to the current object using page 0 zbPmgCurrentIdent.
+
+	ldx vsPmgChainIdent,x  ; Move to chained object.
+
+	; The A register contains the current object's "Real" VPos.
+	; This becomes the linked object's logical VPos to be offset.
+
+	jmp libPmgSetVPos
+
+exitSetVPos
 	ldx zbPmgCurrentIdent ; restore the possibly destroyed X value
 
 	rts

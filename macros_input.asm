@@ -24,13 +24,13 @@
 
  ; use joystick 2, change to CIAPRB for joystick 1
  
-JOYSTICKREGISTER  = STICK0  ; Atari use first stick.
-TRIGGERREGISTER   = STRIG0
+JOYSTICKREGISTER  = STICK0  ; From PIA.asm.  Atari uses first stick.
+TRIGGERREGISTER   = STRIG0  ; From GTIA.asm.  Really.
 
-GAMEPORTUPMASK    = %00000001
-GAMPORTDOWNMASK   = %00000010
-GAMEPORTLEFTMASK  = %00000100
-GAMEPORTRIGHTMASK = %00001000
+GAMEPORTUPMASK    = STICK_UP ; From PIA.asm for joystick directions.
+GAMPORTDOWNMASK   = STICK_DOWN
+GAMEPORTLEFTMASK  = STICK_LEFT
+GAMEPORTRIGHTMASK = STICK_RIGHT
 GAMEPORTFIREMASK  = %00010001 ; Note the 16 bit is kept to keep it unique.
 FIREDELAYMAX      = 30
 
@@ -43,7 +43,7 @@ FIREDELAYMAX      = 30
 ;-------------------------------------------------------------------------------
 
 .macro mInput_GetHeld buttonMask 
-	.if :buttonMask=GAMEPORTFIREMASK
+	.if :buttonMask=GAMEPORTFIREMASK ; 16 value bit set to make this special.
 		lda vbTriggerThisFrame
 		and #1
 	.else

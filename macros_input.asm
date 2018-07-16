@@ -24,10 +24,10 @@
 
  ; use joystick 2, change to CIAPRB for joystick 1
  
-JOYSTICKREGISTER  = STICK0  ; From PIA.asm.  Atari uses first stick.
-TRIGGERREGISTER   = STRIG0  ; From GTIA.asm.  Really.
+JOYSTICKREGISTER  = STICK0  ; From PIA.asm.  Atari uses first joystick.
+TRIGGERREGISTER   = STRIG0  ; From GTIA.asm. Really. Trigger is not in PIA.
 
-GAMEPORTUPMASK    = STICK_UP ; From PIA.asm for joystick directions.
+GAMEPORTUPMASK    = STICK_UP ; Values from PIA.asm for joystick directions.
 GAMPORTDOWNMASK   = STICK_DOWN
 GAMEPORTLEFTMASK  = STICK_LEFT
 GAMEPORTRIGHTMASK = STICK_RIGHT
@@ -43,11 +43,11 @@ FIREDELAYMAX      = 30
 ;-------------------------------------------------------------------------------
 
 .macro mInput_GetHeld buttonMask 
-	.if :buttonMask=GAMEPORTFIREMASK ; 16 value bit set to make this special.
-		lda vbTriggerThisFrame
+	.if :buttonMask=GAMEPORTFIREMASK ; bit in 16 value set to make this special.
+		lda zbTriggerThisFrame
 		and #1
 	.else
-		lda vbGameportThisFrame
+		lda zbGameportThisFrame
 		and #:buttonMask
 	.endif
 .endm  ; test with bne on return
@@ -56,8 +56,9 @@ FIREDELAYMAX      = 30
 ;-------------------------------------------------------------------------------
 														mInput_GetFirePressed
 ;-------------------------------------------------------------------------------
-; As a macro this was a lot of code to drop in mainline 
-; during assembly and there seems to be no arguments.
+; The original macro this was a lot of code to drop 
+; in mainline repeatedly during assembly and there 
+; seems to be no arguments.
 ; So...?  It looks like this should be a library function,
 ; so this has moved to the libInput file.
 ; 

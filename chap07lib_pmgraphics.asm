@@ -148,6 +148,7 @@ vsPmgVPos            .ds PMGOBJECTSMAX, 0 ; Y coordinate of each object (logical
 vsPmgRealVPos        .ds PMGOBJECTSMAX, 0 ; Real Y position on screen (if logic adjusts PmgVPos)
 vsPmgPrevVPos        .ds PMGOBJECTSMAX, 0 ; Previous Real Y position before move  (if controls adjusts PmgVPos)
 
+vsPmgIsChain         .ds PMGOBJECTSMAX, 0 ; This object is chained to a prior object. 
 vsPmgChainIdent      .ds PMGOBJECTSMAX, 0 ; Object ID of next object linked to this. 
 vsPmgXOffset         .ds PMGOBJECTSMAX, 0 ; X offset of HPos (typically for a chained P/M object)
 vsPmgYOffset         .ds PMGOBJECTSMAX, 0 ; Y offset of VPos (typically for a chained P/M object)
@@ -322,9 +323,12 @@ libPmgZeroObject
 	sta vsPmgAddrLo,x 
 	sta vsPmgAddrHi,x
 
+	sta vsPmgIsChain,x
+	
 	sta vsPmgHPos,x
 	sta vsPmgRealHPos,x
-
+	sta vsPmgPrevHPos,x
+	
 	sta vsPmgVPos,x
 	sta vsPmgRealVPos,x
 	sta vsPmgPrevVPos,x
@@ -394,15 +398,22 @@ libPmgCopyZPToObject
 	lda zbPmgVDelay
 	sta vsPmgVDelay,x
 
-	lda zbPmgHPos      ; For the time being the X offset is not added
-	sta vsPmgHPos,x
+	lda zbPmgHPos      
+	sta vsPmgHPos,x   
+	clc                 ; Add X offset to make real position
+	adc zbPmgXOffset
 	sta vsPmgRealHPos,x
-	sta vsPmgPrevHPos,x
+	; intentionally do not change previous HPos.  It is 0 by default.
 
-	lda zbPmgVPos      ; For the time being the Y offset is not added
+	lda zbPmgVPos      
 	sta vsPmgVPos,x
+	clc                 ; Add X offset to make real position
+	adc zbPmgYOffset
 	sta vsPmgRealVPos,x
-	sta vsPmgPrevVPos,x
+	; intentionally do not change previous VPos.  It is 0 by default.
+	
+	lda zbPmgIsChain
+	sta vsPmgIsChain,x
 
 	lda zbPmgChainIdent
 	sta vsPmgChainIdent,x

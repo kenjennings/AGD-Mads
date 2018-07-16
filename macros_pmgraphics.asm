@@ -74,6 +74,7 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 ; vDelay
 ; hPos
 ; vPos
+; isChain 0 is no.  1 is yes.  If yes, then iterating object will skip this entry
 ; chainID (obj ID, $FF for no chain)
 ; XOffset  (Add to hPos (typically when this object is chained.))
 ; YOffset  (Add to vPos (typically when this object is chained.))
@@ -87,9 +88,9 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 ; itself. Therefor, all argument value greater than 255 are assumed to be
 ; addresses and everything else byte-sized is assumed to be a literal value.
 
-.macro mPmgInitObject objID,pmID,color,size,vDelay,hPos,vPos,chainID,XOffset,YOffset,animID,animEnable
-	.if :0<>12
-		.error "PmgInitObject: 12 arguments (object ID, P/M ID, color, size, vDelay, hPos, vPos, chain ID, X Offset, Y Offset, animation ID, animation Enable) required."
+.macro mPmgInitObject objID,pmID,color,size,vDelay,hPos,vPos,isChain,chainID,XOffset,YOffset,animID,animEnable
+	.if :0<>13
+		.error "PmgInitObject: 13 arguments (object ID, P/M ID, color, size, vDelay, hPos, vPos, isChain, chain ID, X Offset, Y Offset, animation ID, animation Enable) required."
 	.endif
 
 	; This allows the caller to iterate through objects using
@@ -123,7 +124,10 @@ SEQFRAMESMAX  = 6  ; Maximum number of frames in an animated sequence.
 	mLDA_VM :vPos
 	sta zbPmgVPos; Lib will copy to zbPmgRealVPos and zbPmgPrevVPos
 
-	mLDA_VM :chainID
+	mLDA_VM :isChain ; This object is a chained object.
+	sta zbPmgIsChain
+
+	mLDA_VM :chainID ; The next objet in the chain.
 	sta zbPmgChainIdent
 
 	mLDA_VM :XOffset 

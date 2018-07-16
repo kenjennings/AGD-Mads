@@ -71,6 +71,7 @@ zbPmgVDelay      .byte 0   ; VDelay (for double line resolution.)
 zbPmgHPos        .byte 0   ; X position of each object (logical)
 zbPmgVPos        .byte 0   ; Y coordinate of each object (logical)
 
+zbPmgisChain     .byte 0   ; Flag if this object is a chain object. 0/No, 1/Yes.
 zbPmgChainIdent  .byte 0   ; Object ID of chained object.
 zbPmgXOffset     .byte 0   ; X offset of HPos (typically for a chained P/M object)
 zbPmgYOffset     .byte 0   ; Y offset of VPos (typically for a chained P/M object)

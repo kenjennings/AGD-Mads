@@ -29,7 +29,7 @@
 																INPUTUPDATE A
 ;===============================================================================
 ; Collect joystick and trigger information.
-; Compare to identify changes.
+; Compare to prior value to identify changes.
 ; Store for later reference.
 
 libInputUpdate
@@ -47,7 +47,7 @@ libInputUpdate
 	lda zbFireDelay
 	beq bIUDelayZero
 	dec zbFireDelay
-	
+
 bIUDelayZero
 	lda zbGameportThisFrame
 	sta zbGameportLastFrame

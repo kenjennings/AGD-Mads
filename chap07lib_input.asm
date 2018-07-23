@@ -7,8 +7,8 @@
 ; performing game controller input.
 
 ; The Atari OS solves much of the nitty-gritty providing considerable
-; support for polling controllers.  The OS verical blank routine 
-; conveniently separates joystick and trigger values into individual. 
+; support for polling controllers.  The OS verical blank routine
+; conveniently separates joystick and trigger values into individual.
 ; This is stored in shadow variables.
 
 
@@ -43,7 +43,7 @@ libInputUpdate
 	sta zbTriggerThisFrame
 	eor zbTriggerLastFrame
 	sta zbTriggerDiff
-        
+
 	lda zbFireDelay
 	beq bIUDelayZero
 	dec zbFireDelay
@@ -61,7 +61,7 @@ bIUDelayZero
 ;===============================================================================
 														INPUT_GETFIREPRESSED  A
 ;===============================================================================
-; Determine if Fire is pressed.  
+; Determine if Fire is pressed.
 ; Adjust for timing/duration.
 ;
 ;
@@ -81,14 +81,14 @@ bHeld
 	; is this 1st frame?
 	lda zbTriggerDiff
 	and #GAMEPORTFIREMASK
-        
+
 	beq bNotFirst
 	lda #0
 	sta zbFireBlip ; Fire
 
 	; reset delay
 	lda #FIREDELAYMAX
-	sta zbFireDelay 
+	sta zbFireDelay
 
 bNotFirst
 	; is the delay zero?
@@ -99,9 +99,9 @@ bNotFirst
 
 	; reset delay
 	lda #FIREDELAYMAX
-	sta zbFireDelay   
-        
-bNotHeld 
+	sta zbFireDelay
+
+bNotHeld
 	lda zbFireBlip
 
 	rts

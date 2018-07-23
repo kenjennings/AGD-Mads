@@ -1,9 +1,9 @@
 ; ==========================================================================
-; Data declarations and subroutine library code 
+; Data declarations and subroutine library code
 ; performing Player/missile operations.
 
 ; ==========================================================================
-; Player/Missile memory is declared in the Memory file. 
+; Player/Missile memory is declared in the Memory file.
 
 ; Establish a few other immediate values relative to PMBASE
 
@@ -41,7 +41,7 @@ PLAYERADR3 = PMGRAM+$700
 ; ScreenBanner uses  A  X  and  Y
 ;==============================================================================
 
-	; The only bad thing about modern computers is how difficult it is to 
+	; The only bad thing about modern computers is how difficult it is to
 	; type those special graphics characters....
 
 	; This is intentionally done using internal screen codes, so the data
@@ -53,25 +53,25 @@ BannerBytes
 		.byte $52 ; ctrl-R, horizontal line
 	.endr
 	.byte $45 ; ctrl-e, upper right box corner
-	
+
 	.byte $7C,"This modification of the      ",$7C ; $7C is vertical bar.
 	.byte $7C,"Chapter 6 introductory program",$7C
 	.byte $7C,"waits for 256 frames, which is",$7C
 	.byte $7C,"about 4 seconds, and then it  ",$7C
-	.byte $7C,"changes the screen colors.    ",$7C  
+	.byte $7C,"changes the screen colors.    ",$7C
 
 	.byte $5A ; ctrl-z, lower left box corner
 	.rept 30
 		.byte $52 ; ctrl-R, horizontal line
 	.endr
 	.byte $43 ; ctrl-c, lower right box corner
-	
+
 ScreenBanner
 	lda #<BannerBytes   ; Setup zero page pointer to the banner
 	sta screenAddress1
 	lda #>BannerBytes
 	sta screenAddress1+1
-	
+
 	lda #<[SCREENRAM+84] ; Setup the Zero page pointer to the screen position
 	sta screenAddress2
 	lda #>[SCREENRAM+84]
@@ -81,7 +81,7 @@ ScreenBanner
 
 bLoopWriteScreenBannerLine
 	ldy #31
-	
+
 bLoopWriteScreenBannerChars
 	lda (screenAddress1),y ; Get character from banner buffer.
 	sta (screenAddress2),y ; store into screen position
@@ -102,13 +102,13 @@ bLoopWriteScreenBannerChars
 	bcc bOverAddress1High
 	inc screenAddress1+1 ; increment of 32 means this only ever changes by 1
 bOverAddress1High
-	
+
 	; Add 40 to the screen memory
 	clc
 	lda #40
 	adc screenAddress2
 	sta screenAddress2
-	bcc bDoNextBannerLine 
+	bcc bDoNextBannerLine
 	inc screenAddress2+1 ; increment of 40 means this only ever changes by 1
 
 bDoNextBannerLine
@@ -119,45 +119,45 @@ bExitScreenBanner
 
 
 ;==============================================================================
-;										ScreenFillMem                A  X  
+;										ScreenFillMem                A  X
 ;==============================================================================
-; It is like a generic routine to clear memory, but it specifically sets 
-; 1,040 sequential bytes, and it is only used to clear screen RAM.  
+; It is like a generic routine to clear memory, but it specifically sets
+; 1,040 sequential bytes, and it is only used to clear screen RAM.
 ;
 ; ScreenFillMem expects  A  to contain the byte to put into all screen memory.
 ;
 ; ScreenFillMem uses  X
 ;==============================================================================
 
-ScreenFillMem       
+ScreenFillMem
 	ldx #208              ; Set loop value
 
 LoopScreenFillMem
-	sta SCREENRAM-1,x     ; Set +000 - +207 
-	sta SCREENRAM+207,x   ; Set +208 - +415  
-	sta SCREENRAM+415,x   ; Set +416 - +623 
+	sta SCREENRAM-1,x     ; Set +000 - +207
+	sta SCREENRAM+207,x   ; Set +208 - +415
+	sta SCREENRAM+415,x   ; Set +416 - +623
 	sta SCREENRAM+623,x   ; Set +624 - +831
 	sta SCREENRAM+831,x   ; Set +832 - +1039
 
 	dex
 	bne LoopScreenFillMem ; If x<>0, then loop again
 
-	rts 
+	rts
 
 
 ;==============================================================================
-;										ScreenSetMode                A  Y  
+;										ScreenSetMode                A  Y
 ;==============================================================================
-; The text/graphics modes on the Atari are determined by the 
-; instructions in the Display List.  
+; The text/graphics modes on the Atari are determined by the
+; instructions in the Display List.
 ;
 ; The library creates a Display List as a full screen of text similar
-; to the way the C64 treats its display. (Done for the purpose of 
-; convenience - the least departure from the way the C64 works). 
-; In this case "normal" text is a scrren of ANTIC text mode 2. 
+; to the way the C64 treats its display. (Done for the purpose of
+; convenience - the least departure from the way the C64 works).
+; In this case "normal" text is a scrren of ANTIC text mode 2.
 ;
-; To change the entire "screen" all the instructions in the Display List must 
-; be changed.  The library supports rewriting all the instructions in the 
+; To change the entire "screen" all the instructions in the Display List must
+; be changed.  The library supports rewriting all the instructions in the
 ; Display with ANTIC modes 2, 4, and 6 which all share the same number of
 ; scan lines per text line and so have nearly identical Display Lists.
 ;
@@ -165,7 +165,7 @@ LoopScreenFillMem
 ;
 ; ScreenSetMode expects  A  to contain the new graphics mode.
 ;
-; ScreenSetMode uses  Y  
+; ScreenSetMode uses  Y
 ;==============================================================================
 
 ScreenSetMode
@@ -198,11 +198,11 @@ bLoopScreenSetMode
 	bpl bLoopScreenSetMode ; Iterate through the 25 sequential instructions.
 
 bExitScreenSetMode
-	rts 
+	rts
 
 
 ;==============================================================================
-;										ScreenWaitScanLine                A  
+;										ScreenWaitScanLine                A
 ;==============================================================================
 ; Subroutine to wait for ANTIC to reach a specific scanline in the display.
 ;
@@ -224,30 +224,30 @@ bLoopWaitScanLine
 ; Subroutine to wait for a number of frames.
 ;
 ; FYI:
-; Calling  mScreenWaitFrames 1  is the same thing as 
+; Calling  mScreenWaitFrames 1  is the same thing as
 ; directly calling ScreenWaitFrame.
 ;
 ; ScreenWaitFrames expects Y to contain the number of frames.
 ;
-; ScreenWaitFrame uses  A  
+; ScreenWaitFrame uses  A
 ;==============================================================================
 
 ScreenWaitFrames
 	tay
 	beq ExitWaitFrames
-	
+
 bLoopWaitFrames
 	jsr ScreenWaitFrame
-	
+
 	dey
 	bne bLoopWaitFrames
-	
+
 ExitWaitFrames
 	rts ; No.  Clock changed means frame ended.  exit.
 
 
 ;==============================================================================
-;										ScreenWaitFrame                A  
+;										ScreenWaitFrame                A
 ;==============================================================================
 ; Subroutine to wait for the current frame to finish display.
 ;

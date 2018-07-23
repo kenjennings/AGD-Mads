@@ -29,9 +29,9 @@ libGamePlayerInit
 ;	LIBSPRITE_ENABLE_AV             playerSprite, True
 ; N/A Atari
 
-; objID,pmID,color,size,vDelay,hPos,vPos,chainID,XOffset,YOffset,animID,animEnable
+; objID,pmID,color,size,vDelay,hPos,vPos,isChain,chainID,XOffset,YOffset,animID,animEnable
 
-	mPmgInitObject 0,0, COLOR_BLACK|$08, PM_SIZE_NORMAL, 0,[[PLAYER_XMIN+PLAYER_XMAX]/2], [[PLAYER_YMIN+PLAYER_YMAX]/2], PMGNOOBJECT,0,1,1
+	mPmgInitObject 0,0, COLOR_BLACK|$08, PM_SIZE_NORMAL, 0,[[PLAYER_XMIN+PLAYER_XMAX]/2], [[PLAYER_YMIN+PLAYER_YMAX]/2], 0,PMGNOOBJECT,0,0,1,1
 
 ;	LIBSPRITE_SETFRAME_AV           playerSprite, PLAYERFRAME
 ;	mPmgSetFrame playerSprite, PLAYER_FRAME

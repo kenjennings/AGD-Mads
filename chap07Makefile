@@ -1,35 +1,35 @@
-all: chap06.xex chap06mod.xex
+all: chap07.xex chap07mod.xex
 
 INCLUDES= ANTIC.asm DOS.asm GTIA.asm OS.asm PIA.asm POKEY.asm
 
-# lib_screen really belongs in the library, but for 
-# academic/demonstation purposes it is updated per 
-# each example program until it is finally presented
-# fully complete at the end.
-# LIBRARIES= macros.asm macros_math.asm macros_screen.asm lib_screen.asm
+# For academic/demonstation purposes the lib* code is presented 
+# containing only what is necessary to assemble and run the program. 
+# Each example program expands the library code until the end when
+# the libraries are presented fully complete.
+# LIBRARIES= macros.asm macros_math.asm macros_screen.asm lib_screen.asm lib_pmgraphics.asm lib_input.asm
 
-LIBRARIES= macros.asm macros_math.asm macros_screen.asm
+LIBRARIES= macros.asm macros_math.asm macros_screen.asm macros_pmgraphics.asm macros_input.asm
 
-SOURCES= chap06Memory.asm chap06lib_screen.asm
+SOURCES= chap07Memory.asm chap07lib_screen.asm chap07lib_pmgraphics.asm chap07lib_input.asm
 
-SOURCESMOD= chap06MemoryMod.asm chap06lib_screenMod.asm
+SOURCESMOD= chap07MemoryMod.asm chap07lib_screenMod.asm chap07lib_pmgraphics.asm chap07lib_input.asm
 
-MAIN= chap06Main.asm
+MAIN= chap07Main.asm
 
-MAINMOD= chap06MainMod.asm
+MAINMOD= chap07MainMod.asm
 
 clean:
 	rm *.xex *.lst *.lab 
 
 run: chap06.xex
-	atari800 chap06.xex
+	atari800 chap07.xex
 
 runmod: chap06mod.xex
-	atari800 chap06mod.xex
+	atari800 chap07mod.xex
 
-chap06.xex: ${MAIN} ${SOURCES} ${INCLUDES} ${LIBRARIES}
-	mads ${MAIN}  -l -t -o:chap06.xex
+chap07.xex: ${MAIN} ${SOURCES} ${INCLUDES} ${LIBRARIES}
+	mads ${MAIN}  -l -t -o:chap07.xex
 
-chap06mod.xex: ${MAINMOD} ${SOURCESMOD} ${INCLUDES} ${LIBRARIES}
-	mads ${MAINMOD}  -l -t -o:chap06mod.xex
+chap07mod.xex: ${MAINMOD} ${SOURCESMOD} ${INCLUDES} ${LIBRARIES}
+	mads ${MAINMOD}  -l -t -o:chap07mod.xex
 

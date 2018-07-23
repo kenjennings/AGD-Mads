@@ -6,17 +6,19 @@
 ;
 ; PMG_RES
 ; Player/Missile resolution for pmgraphics macros/library.
-; Recommended to use ANTIC.asm's PM_1LINE_RESOLUTION and 
+; Recommended to use ANTIC.asm's PM_1LINE_RESOLUTION and
 ; PM_2LINE_RESOLUTION labels for assignment in the code.
 ; i.e. PMG_RES=PM_2LINE_RESOLUTION
 ; If the command line build is necessary this is:
-; PMG_RES=0 which is PM_2LINE_RESOLUTION, or 2 line resolution. 
+; PMG_RES=0 which is PM_2LINE_RESOLUTION, or 2 line resolution.
 ;    (128 vertical pixels, or 2 scan lines per byte)
-; PMG_RES=8 which is PM_1LINE_RESOLUTION, or 1 line resolution 
+; PMG_RES=8 which is PM_1LINE_RESOLUTION, or 1 line resolution
 ;    (256 vertical pixels, or 1 scan lines per byte)
 ;
 ; vsPmgRam
 ; This must be declared in Memory as the PMBASE
+; The consequence of this is the library is not built to support 
+; "page flipping" the player/missile PMBASE.
 
 
 ; ==========================================================================
@@ -148,8 +150,8 @@ vsPmgVPos            .ds PMGOBJECTSMAX, 0 ; Y coordinate of each object (logical
 vsPmgRealVPos        .ds PMGOBJECTSMAX, 0 ; Real Y position on screen (if logic adjusts PmgVPos)
 vsPmgPrevVPos        .ds PMGOBJECTSMAX, 0 ; Previous Real Y position before move  (if controls adjusts PmgVPos)
 
-vsPmgIsChain         .ds PMGOBJECTSMAX, 0 ; This object is chained to a prior object. 
-vsPmgChainIdent      .ds PMGOBJECTSMAX, 0 ; Object ID of next object linked to this. 
+vsPmgIsChain         .ds PMGOBJECTSMAX, 0 ; This object is chained to a prior object.
+vsPmgChainIdent      .ds PMGOBJECTSMAX, 0 ; Object ID of next object linked to this.
 vsPmgXOffset         .ds PMGOBJECTSMAX, 0 ; X offset of HPos (typically for a chained P/M object)
 vsPmgYOffset         .ds PMGOBJECTSMAX, 0 ; Y offset of VPos (typically for a chained P/M object)
 ; Animation sequence playing . . .
@@ -231,7 +233,7 @@ vsSeqAnimHi ; Low byte of address of each animation frame sequence.
 	.byte >vsSeq3 ; Enemy 2
 	.byte >vsSeq4 ; Explosion
 
-vsSeqCount  .byte 1,1,1,1,6 ; Number of frames in the sequence. 
+vsSeqCount  .byte 1,1,1,1,6 ; Number of frames in the sequence.
 
 vsSeqStop   .byte 0,0,0,0,5 ; Sequence frame number to use for display when stopped.
 							  ; Note this is not the Anim Frame ID.  It is Sequence index.
@@ -272,7 +274,7 @@ libPmgInitObject
 	; By default an initized object is all 0 values, so the
 	; object is already disabled.
 
-	; The Player/Missile object is negative, so leave it disabled.  
+	; The Player/Missile object is negative, so leave it disabled.
 	bmi bDoPmgInitContinue
 
 	; Otherwise, enable the object.
@@ -283,10 +285,10 @@ libPmgInitObject
 
 	; Copy the remaining values to P/M object.
 bDoPmgInitContinue
-	jsr libPmgCopyZPToObject 
+	jsr libPmgCopyZPToObject
 
 	; Next, the animation data associations.
-	; Even though the hardware P/M object may be 
+	; Even though the hardware P/M object may be
 	; disabled, the animation will still be set up and
 	; the enable flag updated to whatever was given as
 	; the initialization argument.
@@ -302,7 +304,7 @@ bDoPmgInitContinue
 ;===============================================================================
 ;												libPmgZeroObject  A X
 ;===============================================================================
-; Zero all the PMOBJECTS variables and leave the 
+; Zero all the PMOBJECTS variables and leave the
 ; PMOBJECT and animation disabled.
 ;
 ; X  = the current PMOBJECT ID.
@@ -317,18 +319,18 @@ libPmgZeroObject
 	sta vsPmgColor,x
 	sta vsPmgSize,x
 	sta vsPmgVDelay,x
-	sta vsPmgCollideToField,x  
-	sta vsPmgCollideToPlayer,x 
+	sta vsPmgCollideToField,x
+	sta vsPmgCollideToPlayer,x
 
-	sta vsPmgAddrLo,x 
+	sta vsPmgAddrLo,x
 	sta vsPmgAddrHi,x
 
 	sta vsPmgIsChain,x
-	
+
 	sta vsPmgHPos,x
 	sta vsPmgRealHPos,x
 	sta vsPmgPrevHPos,x
-	
+
 	sta vsPmgVPos,x
 	sta vsPmgRealVPos,x
 	sta vsPmgPrevVPos,x
@@ -355,14 +357,14 @@ libPmgZeroObject
 
 	lda #PMGNOOBJECT      ; This non-value is not a 0 value.
 	sta vsPmgChainIdent,x
-	
+
 	rts
 
 
 ;===============================================================================
 ;												PmgResetBase  A  X  Y
 ;===============================================================================
-; Repopulate the Player/Missile base address in the 
+; Repopulate the Player/Missile base address in the
 ; current PMOBJECTs (X) for the Player/Missile object (Y)
 
 libPmgResetBase
@@ -398,42 +400,42 @@ libPmgCopyZPToObject
 	lda zbPmgVDelay
 	sta vsPmgVDelay,x
 
-	lda zbPmgHPos      
-	sta vsPmgHPos,x   
+	lda zbPmgHPos
+	sta vsPmgHPos,x
 	clc                 ; Add X offset to make real position
 	adc zbPmgXOffset
 	sta vsPmgRealHPos,x
 	; intentionally do not change previous HPos.  It is 0 by default.
 
-	lda zbPmgVPos      
+	lda zbPmgVPos
 	sta vsPmgVPos,x
 	clc                 ; Add X offset to make real position
 	adc zbPmgYOffset
 	sta vsPmgRealVPos,x
 	; intentionally do not change previous VPos.  It is 0 by default.
-	
+
 	lda zbPmgIsChain
 	sta vsPmgIsChain,x
 
 	lda zbPmgChainIdent
 	sta vsPmgChainIdent,x
-	
+
 	lda zbPmgXOffset
 	sta vsPmgXOffset,x
-	
+
 	lda zbPmgYOffset
 	sta vsPmgYOffset,x
-	
+
 	rts
 
 
 ;===============================================================================
 ;												PmgSetupAnim  A X Y
 ;===============================================================================
-; Setup to "Play" animation... 
+; Setup to "Play" animation...
 ; Assigns the animation sequence values in a PMOBJECT.
 ;
-; Note that even if the PMOBJECT is "disabled" the 
+; Note that even if the PMOBJECT is "disabled" the
 ; sequence information will still be established.
 ; Animations just don't play when the PMOBJECT is disabled.
 ;
@@ -447,7 +449,7 @@ libPmgSetupAnim
 
 	sta vsSeqEnable,x
 
-	sty vsSeqIdent,x  ; Y = sequence index. 
+	sty vsSeqIdent,x  ; Y = sequence index.
 
 	; Pick up sequence parameters, put in PMOBJECTs
 
@@ -455,7 +457,7 @@ libPmgSetupAnim
 	sta vsSeqLo,x
 	sta zwFrameAddr   ; Save to reference later
 	lda vsSeqAnimHi,y
-	sta vsSeqHi,x 
+	sta vsSeqHi,x
 	sta zwFrameAddr+1
 
 	lda vsSeqCount,y ; Copy Sequence frame count
@@ -475,7 +477,7 @@ libPmgSetupAnim
 	sta vsSeqFrameBounce,x
 
 	ldy #0
-	sty vsSeqFrameDir,x 
+	sty vsSeqFrameDir,x
 
 	lda (zwFrameAddr),y ; Get frame number 0 in this index.
 
@@ -491,40 +493,40 @@ libPmgSetupAnim
 ; Set the Object Horizontal position.
 ; (Here animation code could optionally vector to churn HPOS to real HPOS.)
 ; If this object has a chain offset, then add the offset for the real position.
-; If this object is chained then the library will update the chained object.  
-; and if that is chained, then the same, so on. 
+; If this object is chained then the library will update the chained object.
+; and if that is chained, then the same, so on.
 ;
-; X  = the current PMOBJECT ID.  
+; X  = the current PMOBJECT ID.
 ; A  = the logical hPos
 
-libPmgSetHPos 
+libPmgSetHPos
 
-	ldy vsPmgRealHPos,x    ; Get the old (real hardware) value and save it for 
-	sty vsPmgPrevHPos,x    ; animation code to make decisions about changes. 
-	
+	ldy vsPmgRealHPos,x    ; Get the old (real hardware) value and save it for
+	sty vsPmgPrevHPos,x    ; animation code to make decisions about changes.
+
 	sta vsPmgHPos, x       ; Save the passed value as the logical value
 
 	ldy vsPmgXOffset,x     ; Does this object have an offset?
 	beq setHposSkipOffset  ; No, skip the manipulation
 
 	clc                    ; Yes.
-	adc vsPmgXOffset,x     ; Offset the position.    
+	adc vsPmgXOffset,x     ; Offset the position.
 
 setHPosSkipOffset
-	sta vsPmgRealHPos, x   ; Save new (adjusted value) as the real position 
+	sta vsPmgRealHPos, x   ; Save new (adjusted value) as the real position
 
 	ldy vsPmgChainIdent,x  ; Is this chained to another object?
 	cpy #PMGNOOBJECT
 	beq exitSetHPos        ; Ident $FF means no link.
 
 	; The linked object needs to be updated, but the current X
-	; is the current object ID, not the linked object ID. 
-	; Changing X would disrupt up every function that follows 
+	; is the current object ID, not the linked object ID.
+	; Changing X would disrupt up every function that follows
 	; each expecting X to be the current object ID.
-	; Page 0 to the rescue -- zbPmgCurrentIdent.  This is set 
-	; by the main code for the current object, and should not 
-	; be changed by the library.  Therefore, the code can change 
-	; X to pick a new object, and then later return X to the 
+	; Page 0 to the rescue -- zbPmgCurrentIdent.  This is set
+	; by the main code for the current object, and should not
+	; be changed by the library.  Therefore, the code can change
+	; X to pick a new object, and then later return X to the
 	; current object.
 
 	ldx vsPmgChainIdent,x  ; Move to chained object.
@@ -532,12 +534,12 @@ setHPosSkipOffset
 	; The A register contains the current object's "Real" HPos.
 	; This becomes the linked object's logical HPos to be offset.
 
-	; jsr libPmgSetHPos  ; Yes, Evil Recursion. It works, but 
-	; it creates an immediate limit on how many objects can be 
+	; jsr libPmgSetHPos  ; Yes, Evil Recursion. It works, but
+	; it creates an immediate limit on how many objects can be
 	; linked based on the current state of the 6502 stack.
 
 	; A non-recursive, but still looping version does the same
-	; successfully without blowing up due to possibly variable 
+	; successfully without blowing up due to possibly variable
 	; hardware conditions.
 
 	jmp libPmgSetHPos
@@ -553,34 +555,34 @@ exitSetHPos
 ;===============================================================================
 ; Set the Object Vertical position.
 ; (Here animation code could optionally vector to churn VPOS to real HPOS.)
-; If this object has a chain offset, then update the chained object.  
-; and if that is chained, then the same, so on. 
+; If this object has a chain offset, then update the chained object.
+; and if that is chained, then the same, so on.
 ;
-; X  = the current PMOBJECT ID.  
+; X  = the current PMOBJECT ID.
 ; A  = the logical vPos
 
-libPmgSetVPos 
+libPmgSetVPos
 
-	ldy vsPmgRealVPos,x    ; Get the old (real hardware) value and save it for 
-	sty vsPmgPrevVPos,x    ; animation code to make decisions about changes. 
-	
+	ldy vsPmgRealVPos,x    ; Get the old (real hardware) value and save it for
+	sty vsPmgPrevVPos,x    ; animation code to make decisions about changes.
+
 	sta vsPmgVPos, x       ; Save the passed value as the logical value
 
 	ldy vsPmgYOffset,x     ; Does this object have an offset?
 	beq setHposSkipOffset  ; No, skip the manipulation
 
 	clc                    ; Yes.
-	adc vsPmgChainOffset,x ; Offset the position.    
+	adc vsPmgChainOffset,x ; Offset the position.
 
 setVPosSkipOffset
-	sta vsPmgRealVPos, x   ; Save new (adjusted value) as the real position 
+	sta vsPmgRealVPos, x   ; Save new (adjusted value) as the real position
 
 	ldy vsPmgChainIdent,x  ; Is this chained to another object?
 	cpy #PMGNOOBJECT
 	beq exitSetVPos        ; Ident $FF means no link.
 
 	; The linked object needs to be updated.
-	; The code can change X to pick a new object, and then later 
+	; The code can change X to pick a new object, and then later
 	; return X to the current object using page 0 zbPmgCurrentIdent.
 
 	ldx vsPmgChainIdent,x  ; Move to chained object.
@@ -600,7 +602,7 @@ exitSetVPos
 ;												PmgSetColor  A X
 ;===============================================================================
 ; Set Player/Missile color.
-; This is not updating actual color registers.  
+; This is not updating actual color registers.
 ; This only updates the color in a PMGOBJECTS list of objects.
 ;
 ; X  = the current PMOBJECT ID.
@@ -661,8 +663,8 @@ libPmgEnableObject
 ;											PmgDisableObject  X
 ;==============================================================================
 ; The fastest way to "remove" an object is to disable it.  (PmgEnable=0 )
-; This action will also set the real HPOS to 0 causing any display code 
-; to move the object off screen where it is not visible.  Everything else, 
+; This action will also set the real HPOS to 0 causing any display code
+; to move the object off screen where it is not visible.  Everything else,
 ; such as clearing the image bitmap, is an optional extra step.
 ;
 ; X  = the current PMOBJECT ID.
@@ -682,7 +684,7 @@ libPmgDisableObject
 ;==============================================================================
 ; Reset HPOS of a PMOBJECTS object to zero.
 ;
-; Reset horizontal positions to 0, so it is not visible 
+; Reset horizontal positions to 0, so it is not visible
 ; on screen no matter the size or bitmap contents.
 ;
 ; X  = the current PMOBJECT ID.
@@ -705,13 +707,13 @@ libPmgMoveObjectZero
 ; Reset all Players and Missiles horizontal positions to 0, so
 ; that none are visible no matter the size or bitmap contents.
 ;
-; There could be 254 objects.  So, comparison for bpl and beq 
+; There could be 254 objects.  So, comparison for bpl and beq
 ; won't work here.  Must be explicit comparison to limit.
 
 libPmgMoveAllObjectsZero
 
 	lda #$00     ; 0 position
-	tax          ; count the PMOBJECTS 
+	tax          ; count the PMOBJECTS
 
 bLoopZeroPMObjPosition
 	sta vsPmgHPos,x

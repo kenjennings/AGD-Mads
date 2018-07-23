@@ -78,7 +78,7 @@ defm    LIBMATH_ADD16BIT_AAVVAA
 
 defm    LIBMATH_MIN8BIT_AV      ; /1 = Number 1 (Address)
                                 ; /2 = Number 2 (Value)
-        
+
         lda #/2                 ; load Number 2
         cmp /1                  ; compare with Number 1
         bcs @skip               ; if Number 2 >= Number 1 then skip
@@ -90,7 +90,7 @@ defm    LIBMATH_MIN8BIT_AV      ; /1 = Number 1 (Address)
 
 defm    LIBMATH_MAX8BIT_AV      ; /1 = Number 1 (Address)
                                 ; /2 = Number 2 (Value)
-        
+
         lda #/2                 ; load Number 2
         cmp /1                  ; compare with Number 1
         bcc @skip               ; if Number 2 < Number 1 then skip
@@ -104,7 +104,7 @@ defm    LIBMATH_MIN16BIT_AAVV   ; /1 = Number 1 High (Address)
                                 ; /2 = Number 1 Low (Address)
                                 ; /3 = Number 2 High (Value)
                                 ; /4 = Number 2 Low (Value)
-        
+
         ; high byte
         lda /1                  ; load Number 1
         cmp #/3                 ; compare with Number 2
@@ -126,7 +126,7 @@ defm    LIBMATH_MAX16BIT_AAVV   ; /1 = Number 1 High (Address)
                                 ; /2 = Number 1 Low (Address)
                                 ; /3 = Number 2 High (Value)
                                 ; /4 = Number 2 Low (Value)
-        
+
         ; high byte
         lda #/3                 ; load Number 2
         cmp /1                  ; compare with Number 1

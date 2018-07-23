@@ -15,15 +15,15 @@
 ; performing game controller input.
 
 ; The Atari OS solves much of the nitty-gritty providing considerable
-; support for polling controllers.  The OS verical blank routine 
-; conveniently separates joystick and trigger values into individual 
+; support for polling controllers.  The OS verical blank routine
+; conveniently separates joystick and trigger values into individual
 ; shadow variables.
 
 ;===============================================================================
 ; Constants
 
  ; use joystick 2, change to CIAPRB for joystick 1
- 
+
 JOYSTICKREGISTER  = STICK0  ; From PIA.asm.  Atari uses first joystick.
 TRIGGERREGISTER   = STRIG0  ; From GTIA.asm. Really. Trigger is not in PIA.
 
@@ -39,10 +39,10 @@ FIREDELAYMAX      = 30
 ; Macros/Subroutines
 
 ;-------------------------------------------------------------------------------
-																mInput_GetHeld 
+																mInput_GetHeld
 ;-------------------------------------------------------------------------------
 
-.macro mInput_GetHeld buttonMask 
+.macro mInput_GetHeld buttonMask
 	.if :buttonMask=GAMEPORTFIREMASK ; bit in 16 value set to make this special.
 		lda zbTriggerThisFrame
 		and #1
@@ -56,13 +56,13 @@ FIREDELAYMAX      = 30
 ;-------------------------------------------------------------------------------
 														mInput_GetFirePressed
 ;-------------------------------------------------------------------------------
-; The original macro this was a lot of code to drop 
-; in mainline repeatedly during assembly and there 
+; The original macro this was a lot of code to drop
+; in mainline repeatedly during assembly and there
 ; seems to be no arguments.
 ; So...?  It looks like this should be a library function,
 ; so this has moved to the libInput file.
-; 
-; As a macro wrapping a library function there's not 
+;
+; As a macro wrapping a library function there's not
 ; much going on here.  Unless I find a variable purpose,
 ; then this will  be dropped from the macros.
 

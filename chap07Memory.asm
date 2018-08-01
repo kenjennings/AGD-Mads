@@ -92,9 +92,10 @@ zwPmgAddr     .word 0
 ; Animation frame bitmap/graphics management...
 ; FYI "frame ID" numbers belong to the sequence management.
 
-zwFrameAddr   .word 0   ; (R) Address of current image frame
-zwFrameHeight .byte 0   ; (R) Height of current image frame.
+zwFrameAddr      .word 0   ; (R) Address of current image frame
+zwFrameHeight    .byte 0   ; (R) Height of current image frame.
 
+zbPmgLinesToZero .byte 0   ; Number of bytes of P/M memeory to zero before or after frame.
 
 ; Forcing Pmg Ident to end of page 0, address $FF.  Therefore, the
 ; non-Page 0 memory values can be $00 to $FE.  (theoretically)

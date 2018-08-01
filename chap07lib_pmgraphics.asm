@@ -156,6 +156,8 @@ vsPmgXOffset         .ds PMGOBJECTSMAX, 0 ; X offset of HPos (typically for a ch
 vsPmgYOffset         .ds PMGOBJECTSMAX, 0 ; Y offset of VPos (typically for a chained P/M object)
 ; Animation sequence playing . . .
 
+vsPmgSeqRedraw       .ds PMGOBJECTSMAX, 0 ; On next redraw pass, update P/M image.
+
 vsSeqIdent           .ds PMGOBJECTSMAX, 0 ; (R) Animation ID in use
 vsSeqEnable          .ds PMGOBJECTSMAX, 0 ; (R/W) Animation is playing/1 or stopped/0
 
@@ -203,10 +205,17 @@ vsFrameAddrHi ; High Byte of each animation image
 	.endr
 
 vsFrameHeight ; Number of Bytes in each animation image
-	.ds 9,21 ; All frames 21 bytes tall
+	.ds 9,21 ; All nine frames 21 bytes tall
 
 
 ; Managing Animation Sequences,
+
+ANIM_BLANK     = 0 ; Blankitty-blank
+ANIM_PLAYER    = 1 ; Player Ship
+ANIM_ENEMY1    = 2 ; Enemy 1
+ANIM_ENEMY2    = 3 ; Enemy 2
+ANIM_EXPLOSION = 4 ; Explosion
+
 ; given a sequence ID...
 
 vsSeq0 .byte 0 ; Blank, do nothing (frame number 0)
@@ -337,6 +346,8 @@ libPmgZeroObject
 
 	sta vsPmgXOffset,x
 	sta vsPmgYOffset,x
+
+	sta vsPmgSeqRedraw,x
 
 	sta vsSeqIdent,x
 	sta vsSeqEnable,x
@@ -577,15 +588,22 @@ libPmgSetVPos
 setVPosSkipOffset
 	sta vsPmgRealVPos, x   ; Save new (adjusted value) as the real position
 
-	ldy vsPmgChainIdent,x  ; Is this chained to another object?
-	cpy #PMGNOOBJECT
+	cmp vsPmgPrevVPos,x    ; Did VPos change?
+	beq setVPosSkipRedraw  ; No.  Do not flag it for redraw.
+
+	inc vsPmgSeqRedraw,x   ; Yes.  VPos change means image redraw is needed.
+
+setVPosSkipRedraw
+	lda vsPmgChainIdent,x  ; Is this chained to another object?
+	cmp #PMGNOOBJECT
 	beq exitSetVPos        ; Ident $FF means no link.
 
 	; The linked object needs to be updated.
 	; The code can change X to pick a new object, and then later
 	; return X to the current object using page 0 zbPmgCurrentIdent.
 
-	ldx vsPmgChainIdent,x  ; Move to chained object.
+	tax                 ; Move to chained object.
+	lda vsPmgRealVPos,x  
 
 	; The A register contains the current object's "Real" VPos.
 	; This becomes the linked object's logical VPos to be offset.

@@ -1,6 +1,17 @@
 ;==============================================================================
 ; Constants
 
+PMG_PLAYER = 0
+PMG_ENEMY0 = 1
+PMG_ENEMY1 = 2
+PMG_ENEMY2 = 3
+PMG_ENEMY3 = 4
+PMG_ENEMY4 = 5
+PMG_ENEMY5 = 6
+PMG_ENEMY6 = 7
+PMG_ENEMY7 = 8
+PMG_ENEMY8 = 9
+
 PLAYER_FRAME           = 1
 PLAYER_HORIZONTALSPEED = 2
 PLAYER_VERTICALSPEED   = 1
@@ -13,6 +24,7 @@ PLAYER_XMAX            = 64
 PLAYER_YMIN            = 180
 PLAYER_YMAX            = 229
 
+
 ;===============================================================================
 ; Variables
 
@@ -22,27 +34,26 @@ playerX      .byte 0
 ;playerXLow   .byte 175
 PlayerY      .byte 229
 
+
 ;===============================================================================
 ; Macros/Subroutines
 
 libGamePlayerInit
-;	LIBSPRITE_ENABLE_AV             playerSprite, True
-; N/A Atari
 
-; objID,pmID,color,size,vDelay,hPos,vPos,isChain,chainID,XOffset,YOffset,animID,animEnable
+; objID,pmID,fifth,color,size,vDelay,
 
-	mPmgInitObject 0,0, COLOR_BLACK|$08, PM_SIZE_NORMAL, 0,[[PLAYER_XMIN+PLAYER_XMAX]/2], [[PLAYER_YMIN+PLAYER_YMAX]/2], 0,PMGNOOBJECT,0,0,1,1
+	mPmgInitObject PMG_PLAYER,0,0,COLOR_BLACK|$08,PM_SIZE_NORMAL, 0
 
-;	LIBSPRITE_SETFRAME_AV           playerSprite, PLAYERFRAME
-;	mPmgSetFrame playerSprite, PLAYER_FRAME
+; objID,hPos,vPos,chainID,isChain,XOffset,YOffset,
 
-;	LIBSPRITE_SETCOLOR_AV           playerSprite, LightGray
-;	mPmgSetColor playerSprite, COLOR_BLACK|$08
+	mPmgInitPosition PMG_PLAYER,[[PLAYER_XMIN+PLAYER_XMAX]/2], [[PLAYER_YMIN+PLAYER_YMAX]/2], PMGNOOBJECT,0,0,0
 
-;	LIBSPRITE_MULTICOLORENABLE_AV   playerSprite, True
-; N/A Atari
+; objID,animID,animEnable,startFrame
+
+	mPmgInitAnim PMG_PLAYER,ANIM_PLAYER,1,0
 
 	rts
+
 
 ;===============================================================================
 

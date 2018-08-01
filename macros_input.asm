@@ -22,8 +22,6 @@
 ;===============================================================================
 ; Constants
 
- ; use joystick 2, change to CIAPRB for joystick 1
-
 JOYSTICKREGISTER  = STICK0  ; From PIA.asm.  Atari uses first joystick.
 TRIGGERREGISTER   = STRIG0  ; From GTIA.asm. Really. Trigger is not in PIA.
 
@@ -31,7 +29,7 @@ GAMEPORTUPMASK    = STICK_UP ; Values from PIA.asm for joystick directions.
 GAMPORTDOWNMASK   = STICK_DOWN
 GAMEPORTLEFTMASK  = STICK_LEFT
 GAMEPORTRIGHTMASK = STICK_RIGHT
-GAMEPORTFIREMASK  = %00010001 ; Note the 16 bit is kept to keep it unique.
+GAMEPORTFIREMASK  = %00010001 ; Note the 16 value bit included to keep this unique.
 FIREDELAYMAX      = 30
 
 

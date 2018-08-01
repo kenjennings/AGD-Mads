@@ -23,6 +23,10 @@ ANIMSEQMAX    = 5   ; Number of Animation sequences managed.
 
 SEQFRAMESMAX  = 6   ; Maximum number of frames in an animated sequence.
 
+; Still conmtemplating this...
+
+SEQBLANKFRAME =$FF  ; If a sequence is assigned FF, it will write 
+                    ; zero value bytes over the last frame height.
 
 
 ;===============================================================================

@@ -46,6 +46,12 @@ PLAYERADR2 = vsPmgRam+$300
 PLAYERADR3 = vsPmgRam+$380
 .endif
 
+; Hardware references.
+
+; The index here is the P/M Ident. 
+; Players 0 - 3, Missiles 4 - 7.
+
+; For each P/M Ident declare the memory Map starting address...
 
 vsPmgRamAddrLo
 	.byte <MISSILEADR, <MISSILEADR, <MISSILEADR, <MISSILEADR
@@ -54,6 +60,24 @@ vsPmgRamAddrLo
 vsPmgRamAddrHi
 	.byte >MISSILEADR, >MISSILEADR, >MISSILEADR, >MISSILEADR
 	.byte >PLAYERADR0, >PLAYERADR1, >PLAYERADR2, >PLAYERADR3
+
+; For each P/M Ident declare the masking data which is necessary
+; for missiles sharing the same bitmap.
+; Bitmap sharing is disabled when "Fifth Player" is enabled.
+
+; For reference, when Missiles are processed individually:
+; (P/M Memory AND vsPmgMaskAND_OFF) OR (Image AND vsPmgMaskAND_ON)
+
+; Turn off selected Missile bits, keep the neighbors' bits.
+
+vsPmgMaskAND_OFF .byte $FF,$FF,$FF,$FF
+				 .byte MASK_MISSILE0_BITS, MASK_MISSILE1_BITS, MASK_MISSILE2_BITS, MASK_MISSILE3_BITS
+
+; Turn off the neighbors' bits, keep the selected Missile bits.
+
+vsPmgMaskAND_ON .byte $00,$00,$00,$00
+				.byte MISSILE0_BITS, MISSILE1_BITS, MISSILE2_BITS, MISSILE3_BITS
+
 
 ;===============================================================================
 ; The Atari has four, 8-bit wide "player" objects, and four, 2-bit wide
@@ -143,12 +167,14 @@ vsPmgAddrHi          .ds PMGOBJECTSMAX, 0 ; High Byte of objects' PMADR base
 vsPmgHPos            .ds PMGOBJECTSMAX, 0 ; X position of each object (logical)
 vsPmgRealHPos        .ds PMGOBJECTSMAX, 0 ; Real X position on screen (if logic adjust from PmgHPos)
 vsPmgPrevHPos        .ds PMGOBJECTSMAX, 0 ; Previous Real X position before move (May be used to determine if linked object must move, too)
+vsPmgFifth           .ds PMGOBJECTSMAX, 0 ; Is Missile linked together for Fifth Player.
 
 ; Still "hardware", but not registers. Just memory offsets.
 
 vsPmgVPos            .ds PMGOBJECTSMAX, 0 ; Y coordinate of each object (logical)
 vsPmgRealVPos        .ds PMGOBJECTSMAX, 0 ; Real Y position on screen (if logic adjusts PmgVPos)
 vsPmgPrevVPos        .ds PMGOBJECTSMAX, 0 ; Previous Real Y position before move  (if controls adjusts PmgVPos)
+vsPmgPrevHeight      .ds PMGOBJECTSMAX, 0 ; Remember frame height when switching between anims.
 
 vsPmgIsChain         .ds PMGOBJECTSMAX, 0 ; This object is chained to a prior object.
 vsPmgChainIdent      .ds PMGOBJECTSMAX, 0 ; Object ID of next object linked to this.
@@ -157,6 +183,7 @@ vsPmgYOffset         .ds PMGOBJECTSMAX, 0 ; Y offset of VPos (typically for a ch
 ; Animation sequence playing . . .
 
 vsPmgSeqRedraw       .ds PMGOBJECTSMAX, 0 ; On next redraw pass, update P/M image.
+vsPmgSeqBlank        .ds PMGOBJECTSMAX, 0 ; Before redraw, blank bytes at vsPmgPrevHPos
 
 vsSeqIdent           .ds PMGOBJECTSMAX, 0 ; (R) Animation ID in use
 vsSeqEnable          .ds PMGOBJECTSMAX, 0 ; (R/W) Animation is playing/1 or stopped/0
@@ -334,20 +361,22 @@ libPmgZeroObject
 	sta vsPmgAddrLo,x
 	sta vsPmgAddrHi,x
 
-	sta vsPmgIsChain,x
-
 	sta vsPmgHPos,x
 	sta vsPmgRealHPos,x
 	sta vsPmgPrevHPos,x
+	sta vsPmgFifth,x
 
 	sta vsPmgVPos,x
 	sta vsPmgRealVPos,x
 	sta vsPmgPrevVPos,x
+	sta vsPmgPrevHeight,x
 
+	sta vsPmgIsChain,x
 	sta vsPmgXOffset,x
 	sta vsPmgYOffset,x
 
 	sta vsPmgSeqRedraw,x
+	sta vsPmgSeqBlank,x
 
 	sta vsSeqIdent,x
 	sta vsSeqEnable,x
@@ -401,6 +430,9 @@ libPmgResetBase
 ; Y  = the sequence ID.
 
 libPmgCopyZPToObject
+
+	lda zbPmgFifth
+	sta vsPmgFifth,x
 
 	lda zbPmgColor
 	sta vsPmgColor,x
@@ -495,6 +527,9 @@ libPmgSetupAnim
 	sta vsSeqFrameCurrent,x ; And set current frame to same.
 	sta vsSeqFramePrev,x    ; and set previous frame to same.
 
+	inc vsPmgSeqRedraw,x  ; Force redraw at next opportunity.
+	inc vsPmgSeqBlank,x   ; Clear old frame at PrevVpos for PrevHeight.
+	
 	rts
 
 

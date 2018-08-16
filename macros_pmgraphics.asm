@@ -9,6 +9,8 @@
 ;===============================================================================
 ; Constants
 
+; the hardware stuff
+
 PMGOBJECTSMAX = 16  ; Mostly arbitrary.  In theory, up to 255.
 					; In practice, something else: the entry index value
 					; corresponding to the zbPmgCurrentIdent zero page
@@ -19,14 +21,38 @@ PMGNOOBJECT   = $FF ; a symbol to represent an object ID that
 					; This also works to identify a P/M hardware
 					; ID (Player 0 to 3, Missile 0 to 3) as not valid
 
-ANIMSEQMAX    = 5   ; Number of Animation sequences managed.
+; Three states for a set of missiles managed as Fifth Player.
+; 1) NO_FIFTH_PLAYER is default for all objects.  Behave normally.
+; 2) FIFTH_PLAYER means source image is written to the missile 
+;    memory map as unmasked bytes like it were a player.  Use this 
+;    for the Parent object (aka the first of a chained object).
+; 3) FIFTH_PLAYER_CHILD will suppress all vertical position 
+;    changes and any image map writes for the missile  Horizontal 
+;    placement and math will still occur.  Use this on the 
+;    chained objects.
 
-SEQFRAMESMAX  = 6   ; Maximum number of frames in an animated sequence.
+; Setup of objects to make a group of missiles a fifth player...  
+; If all objects are normal width then Xoffset is +2 color clocks for each:
+; Object 1, PMG ID 4, FIFTH_PLAYER,       XOffset+0, Chain ID is 2.        Is Chain = 0
+; Object 2, PMG ID 5, FIFTH_PLAYER_CHILD, XOffset+2, Chain ID is 3,        Is Chain = 1
+; Object 3, PMG ID 6, FIFTH_PLAYER_CHILD, XOffset+2, Chain ID is 4,        Is Chain = 1
+; Object 4, PMG ID 7, FIFTH_PLAYER_CHILD, XOffset+2, Chain ID is NOOBJECT, Is Chain = 1
+
+NO_FIFTH_PLAYER    = $00
+;FIFTH_PLAYER      = this is from GTIA.asm value.
+FIFTH_PLAYER_CHILD = $FF
+
+; the soft stuff...
+
+ANIMSEQMAX    = 5    ; Number of Animation sequences managed.
+
+SEQFRAMESMAX  = 6    ; Maximum number of frames in an animated sequence.
 
 ; Still conmtemplating this...
 
-SEQBLANKFRAME =$FF  ; If a sequence is assigned FF, it will write 
-                    ; zero value bytes over the last frame height.
+SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write 
+                     ; zero value bytes over the last frame height.
+
 
 
 ;===============================================================================
@@ -47,9 +73,9 @@ SEQBLANKFRAME =$FF  ; If a sequence is assigned FF, it will write
 	.endif
 
 	.if :objID<>zbPmgCurrentIdent ; Use the page 0 value?
-		mLDX_VM :objID          ; No. Either explicit or memory.
+		mLDX_VM :objID            ; No. Either explicit or memory.
 	.else
-		ldx :zbPmgCurrentIdent   ; Yes.  reload from page 0.
+		ldx :zbPmgCurrentIdent    ; Yes.  reload from page 0.
 	.endif
 .endm
 

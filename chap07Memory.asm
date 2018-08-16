@@ -85,17 +85,22 @@ zbSeqIdent       .byte 0   ; (R) Animation (sequence) ID in use
 zbSeqEnable      .byte 0   ; (W) Animation is Playing/1 or Paused/0
 zbSeqStart       .byte 0   ; (R) Force start frame index at initialization
 
+; objects' mask info.
+
+zbPmgMaskAND_OFF .byte 0   ; Turn off selected Missile bits, keep the neighbors' bits.
+zbPmgMaskAND_ON  .byte 0   ; Turn off the neighbors' bits, keep the selected Missile bits.
+
 ; objects' P/M base. Use as: lda (zwPmgAddr),zbPmgRealVPos [as Y]
 
-zwPmgAddr     .word 0
+zwPmgAddr        .word 0
 
 ; Animation frame bitmap/graphics management...
 ; FYI "frame ID" numbers belong to the sequence management.
 
 zwFrameAddr      .word 0   ; (R) Address of current image frame
-zwFrameHeight    .byte 0   ; (R) Height of current image frame.
+zbFrameHeight    .byte 0   ; (R) Height of current image frame.
 
-zbPmgLinesToZero .byte 0   ; Number of bytes of P/M memeory to zero before or after frame.
+zbPmgLinesToZero .byte 0   ; Number of bytes of P/M memory to zero before or after frame.
 
 ; Forcing Pmg Ident to end of page 0, address $FF.  Therefore, the
 ; non-Page 0 memory values can be $00 to $FE.  (theoretically)

@@ -85,7 +85,8 @@ zbSeqIdent       .byte 0   ; (R) Animation (sequence) ID in use
 zbSeqEnable      .byte 0   ; (W) Animation is Playing/1 or Paused/0
 zbSeqStart       .byte 0   ; (R) Force start frame index at initialization
 
-; objects' mask info.
+; objects' mask info.  works like this:
+; P/M Memory = (P/M Memory AND vsPmgMaskAND_OFF) OR (Image AND vsPmgMaskAND_ON)
 
 zbPmgMaskAND_OFF .byte 0   ; Turn off selected Missile bits, keep the neighbors' bits.
 zbPmgMaskAND_ON  .byte 0   ; Turn off the neighbors' bits, keep the selected Missile bits.
@@ -109,9 +110,9 @@ zbPmgLinesToZero .byte 0   ; Number of bytes of P/M memory to zero before or aft
 ;
 ; Realistically, 0 to 254 objects is ridiculous.  Even putting the ident
 ; at $80 would allow for 0 to 127 object IDs which is more than any game
-; could find realistic.  Though, for the sake of completing the thought 
-; process on this subject, the ident $80 provides some gains -- for 
-; instance, all valid object IDs would be only positive numbers which 
+; could find realistic.  Though, for the sake of completing the thought
+; process on this subject, the ident value $80 provides some gains -- for
+; instance, all valid object IDs would then be only positive numbers which
 ; can cut down some explicit comparisons.
 
 	ORG $FF

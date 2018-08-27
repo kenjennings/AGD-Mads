@@ -19,7 +19,7 @@ The 6502 is the same between platforms.  Basic logic, math, and such are identic
 
 - Both use the same Atari 2600-compatible digital joysticks with four directional bits corresponding to up, down, left, right, and a bit for Fire.
 
-- Both support fine scrolling text displays, though the distance of scolling varies between the two.
+- Both support fine scrolling text displays, though the distance of scrolling varies between the two.
 
 More detailed and rigorous use of the hardware features increase the distance of the differences, sometimes significantly:
 
@@ -32,6 +32,8 @@ More detailed and rigorous use of the hardware features increase the distance of
 - The C64 supports a couple kinds of text displays, and a couple graphics modes. The Atari has 14 display modes: six text modes with four kinds of character representation, and eight graphics modes.  The 14 display modes can be presented using four kinds of color interpretation methods. 
 
 - Bitmapped graphics on the C64 uses memory organized like a character set where the Atari uses linear memory for a line of graphics.
+
+- The Atari's hardware can fully support coarse scrolling which allows for several methods of scrolling the display that make CPU time negligible where the C64 must redraw the scrolled display to perform coarse scrolling - a very CPU-intensive activity. 
 
 - Both systems have 256 characters in a font, though the C64 defines a 2K bitmap for all 256 characters, and the Atari defines a 1K bitmap for 128 characters with the subsequent 128 characters automatically displayed in reverse video.  Character order also differs in the character sets.
 

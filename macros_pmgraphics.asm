@@ -61,7 +61,7 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 ;===============================================================================
 ; 													mPmgLdxObjId  X
 ;===============================================================================
-; Something very repetetive.
+; Something very repetitive.
 ; Load the X with the object ID.
 ; If objID is the zero page variable for the current ID, use that.
 ; Otherwise values less than 256 is an explicit value, and values
@@ -133,7 +133,7 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 ;
 ; Arguments:
 ;
-; objID  - index into PMOBJECT (address) ($FF will use Page 0 memeory $FF value)
+; objID  - index into PMOBJECT (address) ($FF will use Page 0 memory $FF value)
 ; pmID   - Player (0 to 3), Missile (4-7), or PMGNOOBJECT
 ; Fifth  - Enable Fifth Player logic. (Use GTIA.asm's FIFTH_PLAYER/on. or 0/off)
 ;          * When Fifth Player is disabled (off/0) then objects using 
@@ -233,7 +233,7 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 	mLDA_VM :vPos
 	sta zbPmgVPos; Lib will copy to zbPmgRealVPos and zbPmgPrevVPos
 
-	mLDA_VM :chainID ; The next objet in the chain.
+	mLDA_VM :chainID ; The next objext in the chain.
 	sta zbPmgChainIdent
 
 	mLDA_VM :isChain ; This object is a chained object.

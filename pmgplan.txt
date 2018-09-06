@@ -1,34 +1,31 @@
+;===============================================================================
+; Redrawing the Player/Missile object image.
+;
 ; if the frame changed or the vertical position changed
 ; then we redraw.   This should be evaluated earlier
-; then reflected in the vsPmgSeqRedraw flag
+; then reflected in the vsPmgSeqRedraw flag.
+;
+; factoids of image copying
+; Scanline - from to
+; 5                
+; 6          .     * 
+; 7          .     *
+; 8          *     *
+; 9          *     .
+; 10         *     .
+;
+; Therefore:
+; prevvpos=8
+; newvpos=6
+; frameheight=3
+; blank_at_end = prevpos-newvpos =2
+; need: anim_adr
+; Need: pm_adr
 
-; Like so:
-
-	lda currentframe,x
-	cmp prevframe,x
-	bne definitelyredraw
-
-	lda prevvpos,x
-	cmp newvpos,x
-	bne definitelyredraw
-
-5 from  to
-6  .     * 
-7  .     *
-8  *     *
-9  *     .
-10 *     .
-
-prevvpos=8
-newvpos=6
-frameheight=3
-anim_adr
-pm_adr
-blank_at_end = prevpos-newvpos =2
 
 ;===============================================================================
 ; Redraw the current PMOBJECT.
-;
+;===============================================================================
 ; Code that modifies the vertical position or changes the animation frame 
 ; number for the object will automatically increment vsPmgSeqRedraw to
 ; indicate the P/M image must be redrawn.
@@ -42,6 +39,9 @@ libPmgSeqRedraw
 
 bExitNoRedraw
 	rts                  ; Leave.
+
+;===============================================================================
+; PmgSeqRedraw 1) Testing.  Setup masks.
 
 bPmgRedraw
 	lda #0               ; Turn off Redraw flag
@@ -83,7 +83,7 @@ bCopyPMGMasks
 	sta zbPmgMaskAND_ON
 
 ;===============================================================================
-; Forced Blanking the P/M image.
+; PmgSeqRedraw 2) Forced Blanking the P/M image.
 ;
 ; Yes, under most circumstance forced blanking the P/M image and 
 ; redrawing the image are largely redundant.  But general purpose 
@@ -106,8 +106,8 @@ bCopyPMGMasks
 ; will be the vertical position.
 
 bCheckForPMGZero
-	; Set the high byte, because it will be used for the image 
-	; copying later even if the current image will not be cleared.
+	; Set the high byte even if the current image will not be cleared,
+	; because it will be used for the image copying later 
 	lda vsPmgRamAddrHi,y
 	sta zwPmgAddr+1
 
@@ -120,57 +120,20 @@ bCheckForPMGZero
 	lda #0        ; Low byte is 0, because Y will be Prev Vpos
 	sta zwPmgAddr
 
-	ldy vsPmgPrevVPos,x ; CHANGED Y!  Lost hardware ID.
+	ldy vsPmgPrevVPos,x ; CHANGED Y for library routine!!  Lost hardware ID.
 	lda vsPrevHeight,x  
-	pha                 ; save height until we evaluate some other things.
-
-	lda zbPmgMaskAND_ON ; If this is zero, then this is for a player.
-	beq bDoZeroPlayerImage
-
-	; Zero Missile Image 
-
-	pla     ; get height
-	tax     ; CHANGED X!  (height)  Lost the PM Object index.
-
-	; Now, at this point the target PM/M address is set, 
-	; Y contains the starting location offset in memory (vpos),
-	; X contains the height of the object (number of bytes to zero) 
-
-bWriteZeroMissileImage   ; used when Missiles are separated
-	lda (zwPmgAddr),Y    ; Get Missile byte
-	and zbPmgMaskAND_OFF ; Turn off the missile's bits.
-	sta (zwPmgAddr),Y    ; Put the byte back
-	iny
-	beq bPMGDrawImageSetup ; Safety.  If Y wraps to 0, then we're leaving the P/M bitmap.
-	dex
-	bne bWriteZeroMissileImage ; until height is reached.
-	beq bPMGDrawImageSetup
-
-bDoZeroPlayerImage
-	pla     ; Get height
-	tax     ; CHANGED X!  (height)  Lost the PM Object index.
-
-	; Now, at this point the target PM/M address is set, 
-	; Y contains the starting location offset in memory (vpos),
-	; X contains the height of the object (number of bytes to zero) 
-
-	lda #0
-
-bWriteZeroPlayerImage   ; used when Missiles are separated
-	sta (zwPmgAddr),Y   ; Set Player byte
-	iny
-	beq bPMGDrawImageSetup ; Safety.  If Y wraps to 0, then we're leaving the P/M bitmap.
-	dex
-	bne bWriteZeroPlayerImage ; until height is reached.
+	tax                 ; CHANGED X for library routine!  (height)  Lost the PM Object index.
+	jsr libPmgZeroCurrentFrameImage
 
 ;===============================================================================
+; PmgSeqRedraw 3) Draw the new P/M object's image.
 
 bPMGDrawImageSetup
 	ldx zbPmgCurrentIdent ; X may have been changed. Reload as object ID.
 
 	ldy vsSeqFrameCurrent,x ; Y = index into frame numbers
-	
-    ; Get the Frame address 
+
+    ; Load the Frame address 
 
     lda vsFrameAddrLo,y      ; Copy frame address to zero page for later.
     sta zwFrameAddr
@@ -182,6 +145,9 @@ bPMGDrawImageSetup
 	sta vsPrevHeight,x       ; also update last height as the current height.
 
 ;===============================================================================
+; PmgSeqRedraw 4) Redraw image and clear residual lines.
+;                (or clear residual lines and redraw image.)   
+;
 ; Load zwPmgAddr with address of image in P/M memory.
 ; This means the real vertical position plus the base 
 ; address of one of the PM graphics object memory maps.
@@ -194,7 +160,7 @@ bPMGDrawImageSetup
 ; depending on the direction of movement.   When the image
 ; moves up the screen, then routine draws the image first
 ; and erases the exposed remains of the previous frame at 
-; the botttom. When the image moves down the reverse occurs:
+; the bottom. When the image moves down the reverse occurs:
 ; the routine must erase the trailing residue first at the 
 ; top, then copy the image data into memory at the new position.
 
@@ -207,7 +173,7 @@ bPMGDrawImageSetup
 ; For copying the image the Low Byte will be vertical position and
 ; the Y register will be 0, counting forward. 
 
-	ldy zbPmgIdent ; Y = P/M hardware ID to get memory map
+	ldy zbPmgIdent ; temporarily, Y = P/M hardware ID to get memory map
 
 ; Which direction?
 	lda vsPmgPrevVPos,x
@@ -278,6 +244,56 @@ bRedrawMoveDown
 
 
 ;===============================================================================
+; Clear the last frame image in P/M memory.
+;
+; Typically called to clear the image of the old frame when changing to an 
+; animation that has a different frame size.
+;
+; zbPmgMaskAND_OFF = Mask to set Missile bits off; ($FF for players)
+; zbPmgMaskAND_ON  = Mask to set Missile Bits on.  ($00 for Players)
+;
+; zwPmgAddr   = Address in P/M memory to begin.  (PMADR+VPos)
+;
+; X = frame height
+
+libPmgZeroCurrentFrameImage
+	lda zbPmgMaskAND_ON ; If this is zero, then this is for a player.
+	beq bDoZeroPlayerImage
+
+	; Zero Missile Image 
+
+	; Now, at this point the target PM/M address is set, 
+	; Y contains the starting location offset in memory (vpos),
+	; X contains the height of the object (number of bytes to zero) 
+
+bWriteZeroMissileImage   ; used when Missiles are separate objects
+	lda (zwPmgAddr),Y    ; Get Missile byte
+	and zbPmgMaskAND_OFF ; Turn off the missile's bits.
+	sta (zwPmgAddr),Y    ; Put the byte back
+	iny
+	beq bPMGDrawImageSetup ; Safety.  If Y wraps to 0, then we're leaving the P/M bitmap.
+	dex
+	bne bWriteZeroMissileImage ; until height is reached.
+	rts
+
+bDoZeroPlayerImage
+
+	; Now, at this point the target PM/M address is set, 
+	; Y contains the starting location offset in memory (vpos),
+	; X contains the height of the object (number of bytes to zero) 
+
+	; lda #0 ; We know that this is already 0 due to  lda zbPmgMaskAND_ON
+
+bWriteZeroPlayerImage   ; used for Players, and Fifth Player for  Missiles
+	sta (zwPmgAddr),Y   ; Set Player byte
+	iny
+	beq bPMGDrawImageSetup ; Safety.  If Y wraps to 0, then we're leaving the P/M bitmap.
+	dex
+	bne bWriteZeroPlayerImage ; until height is reached.
+	rts
+
+
+;===============================================================================
 ; Copy the current Frame data to P/M memory.
 ;
 ; zbPmgMaskAND_OFF = Mask to set Missile bits off; ($FF for players)
@@ -295,7 +311,7 @@ libPmgCopyFrameToPM
 	beq bLoopCopyFramePlayer    ; Because we know the player ON mask is 0.
 
 ; Missiles share P/M image memory.  Therefore animation frames
-; and P/M image memory must be mask to combine only the bits
+; and P/M image memory must be masked to combine only the bits
 ; that apply to the missile.
 
 bLoopCopyFrameMissile
@@ -312,7 +328,7 @@ bLoopCopyFrameMissile
 	rts
 
 ; Players, just a strip-o-bytes.
-; Same logic for Fifth player, missiles immitating a player.
+; Same logic for Fifth player, missiles imitating a player.
 bLoopCopyFramePlayer
 	lda (zwFrameAddr),y
 	sta (zwPmgAddr),y
@@ -327,7 +343,7 @@ bLoopCopyFramePlayer
 ; top of the P/M image that are unneeded when
 ; the P/M image moves down.
 ;
-; The reason Y is not incremented is that PmgAddr points
+; The reason Y is NOT incremented is that PmgAddr points
 ; to data BEFORE the new/current image in P/M memory.
 ; That data needs to be cleared and the address incremented
 ; until it reaches the actual location of the P/M image.
@@ -361,7 +377,7 @@ bLoopZeroLinesMissileTop
 
 	; Player.  Just zero the bytes.
 
-	bZeroPlayerTop
+bZeroPlayerTop
 	lda #0
 bLoopZeroLinesPlayerTop
 	sta (zwPmgAddr),y
@@ -389,16 +405,32 @@ bExitPmgZeroLinesToPMTop
 
 
 libPmgZeroLinesToPMBottom
-	lda #0
-	
-bLoopZeroLinesPMBottom
-	sta (zwPmgAddr),y
-	iny
+	lda zbPmgMaskAND_ON
+	beq bZeroPlayerBottom    ; Because we know the player ON mask is 0.
+
+	; Missile zero, twiddle bits...
+
+bLoopZeroLinesMissileBottom
+	lda (zwPmgAddr),Y    ; Get Missile byte
+	and zbPmgMaskAND_OFF ; Turn off the missile's bits.
+	sta (zwPmgAddr),Y    ; Put the byte back
+	inc zwPmgAddr
+	beq bExitPmgZeroLinesToPMBottom; if this wraps to 0 then we're done.
 	dex ; height
-	bne bLoopZeroLinesPMBottom
-        
+	bne bLoopZeroLinesMissileBottom
 	rts
 
+	; Player.  Just zero the bytes.
 
-libPmgZeroVposToFrameHeight
+	bZeroPlayerBottom
+	lda #0
+bLoopZeroLinesPlayerBottom
+	sta (zwPmgAddr),y
+	inc zwPmgAddr
+	beq bExitPmgZeroLinesToPMBottom; if this wraps to 0 then we're done.
+	dex ; height
+	bne bLoopZeroLinesPlayerBottom
+
+bExitPmgZeroLinesToPMBottom
+	rts
 

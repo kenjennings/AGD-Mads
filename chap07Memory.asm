@@ -218,7 +218,7 @@ vsScreenDiagRam
 ; The Display List.  Since a Display List cannot cross a 1K boundary,
 ; a complicated program may push the alignment to the next 1K.  But,
 ; this is not too terribly complicated, and the Display List will be
-; small, so it is reasonable to just align to a page.
+; small, so it is reasonable to just align to the next page.
 
 	.align $0100 ; Go to next page to make sure display list
 	             ; doesn't cross the 1K boundary.
@@ -248,41 +248,31 @@ vsDisplayList
 	.word vsDisplayList ; Restart the Display List
 
 ; ==========================================================================
-; (3) Declare/define Player/Missile graphics memory
+; (3) Declare/define Player/Missile graphics memory 
 ; ==========================================================================
 
 ; For Player/Missile graphics determine the appropriate boundary
 ; 1K for double line resolution.
 ; 2k for single line resolution.
 
-.if PMG_RES=PM_1LINE_RESOLUTION
-	.align $0800 ; 2K
-.endif
+	mPmgAllocateMaps ; per value of PMG_MAPS create 1 to 4 P/M memory maps.
 
-.if PMG_RES=PM_2LINE_RESOLUTION
-	.align $0400 ; 1K
-.endif
-
-PMGRAM
-vsPmgRam ; Required for PMGraphics libary
-
-; Ordinarily, reserve the space with .DS, but this program will
-; use some of the "unused" memory map for the animation images,
-; so these are commented out.
-
-;.if PMG_RES=PM_1LINE_RESOLUTION
-;	.ds $0800 ; 2K
-;.endif
-
-;.if PMG_RES=PM_2LINE_RESOLUTION
-;	.ds $0400 ; 1K
-;.endif
+END_PMGRAM  ; keep track of where we ended.
 
 ; A little cheating going on here. Use the "unused" part at the beginning
 ; of the Player/Missile memory map for the animation images.
 ; This space is far larger than needed for the nine animation frames.
 
-vsImageBlank .ds 21,0 ; Could also handle an "empty" image as code, but
+; ORG gymnastics like this approach a level of stupid on the border 
+; of causing an assembly phase error.  Carefulness.
+
+; Fire in the hole.  Return assembly location to first Player/Missile memory map.
+
+	ORG PMGRAM 
+
+; Load Player/Missile animation shapes.
+
+vsImageBlank .ds 21,0 ; An "empty" image could be done using code, but
 					  ; it is consistent to have an officially blank frame.
 
 vsImagePlayer
@@ -297,18 +287,9 @@ vsImageEnemy2
 vsImageExplosion
 	icl "chap07explosion.bin" ; 5 frames
 
-; Since  this program does not reserve the Player/Missile graphics
-; memory using the .DS directive, the code forces the next assembly
-; location to skip over the Player/Missile graphics memory map.
+; Return to the assembly location after the Player/Missile graphics memory map.
 
-.if PMG_RES=PM_1LINE_RESOLUTION
-	ORG vsPgRam+$0800 ; 2K
-.endif
-
-.if PMG_RES=PM_2LINE_RESOLUTION
-	ORG vsPgRam+$0400 ; 1K
-.endif
-
+	ORG END_PMGRAM
 
 
 ;===============================================================================

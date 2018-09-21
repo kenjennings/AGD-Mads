@@ -21,6 +21,12 @@ PMGNOOBJECT   = $FF ; a symbol to represent an object ID that
 					; This also works to identify a P/M hardware
 					; ID (Player 0 to 3, Missile 0 to 3) as not valid
 
+; PMG_MAPS (for page flipping) defines how many hardware sprites are 
+; indexed in the lookup tables.  (8 per page). 
+; Validity checking this multiplication will occur in macros...
+
+MAX_PMG_IDENT=PMG_MAPS*8
+
 ; Three states for a set of missiles managed as Fifth Player.
 ; 1) NO_FIFTH_PLAYER is default for all objects.  Behave normally.
 ; 2) FIFTH_PLAYER means source image is written to the missile 
@@ -31,12 +37,14 @@ PMGNOOBJECT   = $FF ; a symbol to represent an object ID that
 ;    placement and math will still occur.  Use this on the 
 ;    chained objects.
 
-; Setup of objects to make a group of missiles a fifth player...  
-; If all objects are normal width then Xoffset is +2 color clocks for each:
-; Object 1, PMG ID 4, FIFTH_PLAYER,       XOffset+0, Chain ID is 2.        Is Chain = 0
-; Object 2, PMG ID 5, FIFTH_PLAYER_CHILD, XOffset+2, Chain ID is 3,        Is Chain = 1
-; Object 3, PMG ID 6, FIFTH_PLAYER_CHILD, XOffset+2, Chain ID is 4,        Is Chain = 1
-; Object 4, PMG ID 7, FIFTH_PLAYER_CHILD, XOffset+2, Chain ID is NOOBJECT, Is Chain = 1
+; Example setup of PMOBJECTs to make a group of Missiles 
+; into a fifth player...  
+; If all objects are normal width then Xoffset is +2 color 
+; clocks for each object:
+; Object 1, PMG ID 4, FIFTH_PLAYER,       XOffset=0,  Chain ID is 2.        Is Chain=0
+; Object 2, PMG ID 5, FIFTH_PLAYER_CHILD, XOffset=+2, Chain ID is 3,        Is Chain=1
+; Object 3, PMG ID 6, FIFTH_PLAYER_CHILD, XOffset=+2, Chain ID is 4,        Is Chain=1
+; Object 4, PMG ID 7, FIFTH_PLAYER_CHILD, XOffset=+2, Chain ID is NOOBJECT, Is Chain=1
 
 NO_FIFTH_PLAYER    = $00
 ;FIFTH_PLAYER      = this is from GTIA.asm value.
@@ -48,7 +56,7 @@ ANIMSEQMAX    = 5    ; Number of Animation sequences managed.
 
 SEQFRAMESMAX  = 6    ; Maximum number of frames in an animated sequence.
 
-; Still conmtemplating this...
+; Still contemplating this...
 
 SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write 
                      ; zero value bytes over the last frame height.
@@ -57,6 +65,98 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 
 ;===============================================================================
 ; Macros/Subroutines
+
+;===============================================================================
+; 													mPmgAllocateMaps
+;===============================================================================
+; For Player/Missile graphics determine the appropriate boundary
+; 1K for double line resolution.
+; 2k for single line resolution.
+;
+; DO NOT USE THIS MORE THAN ONCE IN A PROGRAM.
+
+.macro mPmgAllocateMaps
+; Intentionally conditional based on PMG_MAPS to trigger errors
+; if the build arguments are not set correctly for P/M graphics. 
+.if PMG_MAPS>0
+	.if PMG_RES=PM_1LINE_RESOLUTION
+;		.align $0800 ; 2K
+		PMG_MEMSIZE=$0800
+	.endif
+
+	.if PMG_RES=PM_2LINE_RESOLUTION
+;		.align $0400 ; 1K
+		PMG_MEMSIZE=$0400
+	.endif
+.endif
+
+	.align PMG_MEMSIZE  ; requires PMG_RES set, and PMG_MAPS > 0.
+
+; Reserve the Player/Missile memory  
+
+;.if PMG_RES=PM_1LINE_RESOLUTION
+;	.ds $0800 ; 2K
+;.endif
+
+;.if PMG_RES=PM_2LINE_RESOLUTION
+;	.ds $0400 ; 1K
+;.endif
+
+.if PMG_MAPS>0
+PMGRAM
+PMGRAM0
+vsPmgRam  ; Required base for P/M Graphics library
+vsPmgRam0 ; Could not make up my mind.
+	.ds PMG_MEMSIZE
+.endif
+
+.if PMG_MAPS>1
+PMGRAM1
+vsPmgRam1
+	.ds PMG_MEMSIZE
+.endif
+
+.if PMG_MAPS>2
+PMGRAM2
+vsPmgRam2
+	.ds PMG_MEMSIZE
+.endif
+
+.if PMG_MAPS>3
+PMGRAM3
+vsPmgRam3
+	.ds PMG_MEMSIZE
+.endif
+
+.endm
+
+
+;===============================================================================
+; 													mPmgCmpMaxident  Y
+;===============================================================================
+; PMG_MAPS (for page flipping) defines how many hardware sprites are indexed 
+; in the lookup tables.  (8 per page).  Therefore, validity checking the 
+; hardware ID limits varies depending on the number of pages in use.  This 
+; macro is provided to flag invalid value of PMG_MAPS when comparing maximum 
+; hardware ID.
+; 
+; After invoking this macro the test/branch should use BCS to go to the target 
+; for an Invalid/out of range hardware ID.
+;
+; The macro expect the hardware ID in Y register.
+
+.macro mPmgCmpMaxident
+	.if PMG_MAPS=0 
+		.error "mPmgCmpMaxident: PMG_MAPS is Zero. Minimum 1. Maximum 4."
+	.endif
+
+	.if PMG_MAPS>4
+		.error "mPmgCmpMaxident: PMG_MAPS is greater than the maximum, 4."
+	.endif
+
+	CPY #MAX_PMG_IDENT
+.endm
+
 
 ;===============================================================================
 ; 													mPmgLdxObjId  X
@@ -83,53 +183,59 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 ;===============================================================================
 ;														PmgInitObject
 ;===============================================================================
-; Setup an on-screen object for the first time.
-; Sets values in structure for animation.
+; Setup an on-screen object (PMOBJECT) for the first time.
 ; Call the library init to complete setup, and copy the page zero info
-; into the PMGOBJECTS lists.
+; into the PMOBJECTS lists.
+; Zeros/Initializes other supporting parts of the object not passed
+; as arguments.   
+; Further Init functions would be used to specify those other controls.
 ;
-; The purpose of the library call is to initialize an entry into multiple
-; memory structures for the object.  Other than the object ID itself all 
-; argument value greater than 255 are assumed to be addresses and 
-; everything else byte-sized is assumed to be a literal value.
+; Other than the object ID itself all argument values greater than 
+; 255 are assumed to be addresses and everything else byte-sized is 
+; assumed to be a literal value.
 ;
-; Everything is passed here through Page 0 to make the macro and its 
+; Most values are passed through Page 0 to make the macro and its 
 ; numerous arguments less memory abusive.  The alternative would be to
 ; declare a populated structure of all the arguments and pass that
 ; by its address.  (Hmm, that actually does sound more-ish clever-like
 ; than what is being done here.)  The macro method allows for addresses
-; to variables, so it is more flexible than a declred structure which
+; to variables, so it is more flexible than a declared structure which
 ; would still have to be populated (at build time or more expensively, 
 ; at run-time).  BUT, for the purposes of the simple demo games, the 
-; values are all known at build time, so using a structure would make 
-; really make sense.  Have I talked myself out of anything yet?)
+; values are all known at build time, so using a structure would 
+; really make sense.  Have I talked myself out of something yet?)
 ;
-; The numerous arguments were too numerous.  It got to the point of 14 
-; arguments making the invocation a messy bear.  This clearly needed some 
-; logical breakdown.  
+; In the initial version of this macro/library function the numerous 
+; arguments were becoming too numerous.  It got to the point of 14 
+; arguments making the invocation a messy bear.  This clearly needed 
+; some logical breakdown.  
 ;
 ; The PMOBJECT is divided into three related sections:
 ;
-; 1) Basic object and hardware values. [This routine, PmgInitObject)
-; 2) position and chaining (these are related) [PmgInitPosition]
+; 1) Basic object and hardware values. (This routine, PmgInitObject)
+; 2) Position and chaining (these are related) [PmgInitPosition]
 ; 3) Animation information [PmgInitAnimation]
 ;
 ; This first initialization step will populate all the basic hardware 
 ; assignments for the PMOBJECT.  It will also zero/default all the 
 ; other parts in the object. This means on completion the default 
-; conditions also include: 
+; conditions established include: 
 ;
 ; 1) The object is not chained.
 ; 2) The object does not chain to another object.
-; 3) Horizonal and verical, and Current and Previous positions are 0.
-; 4) The animation assigned is sequence 0 (Blank Frame). 
+; 3) Horizontal, vertical, and Current and Previous positions are 0.
+; 4) The animation assigned is sequence 0 (Blank Frame).
 ;
-; Since this is not an allocating activity this could be called 
-; for an object in use to re-use it.  PMOBJECT initialization does 
-; not clear any display bitmap information.  It would be good form 
-; for the caller to directly assign the animation to the blank 
-; frame sequence and force a redraw before calling the init to 
-; redo the object.
+; Since this is not an allocating activity this could be called for an object 
+; in use to re-use it for another purpose.  This must be done carefully. 
+; PMOBJECT initialization cannot know the difference between uninitialized 
+; memory and a prior object, so it assumes an uninitialized object.  The most
+; noticeable side effect of this is that prior Player/Missile bitmap shapes 
+; will not be cleared in memory.  Therefore, it would be good form for the 
+; programmer to prepare for re-use by calling the functions to clear out 
+; images before initializing the object again. Another good idea is to 
+; directly assign the animation to the blank frame sequence and force a 
+; redraw before calling the initialization to reuse the object.
 ;
 ; Arguments:
 ;
@@ -143,8 +249,8 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 ;          bits shared by other missiles.
 ;          * When Fifth Player is enabled, then the library will not
 ;          mask the image bits and will simply copy the image bytes.
-;          * To effectively use Fifth Player:
-;          - Assign an object using the pmIdfor Missile 3 (value 7) 
+;          * Example to effectively use Fifth Player:
+;          - Assign an object using the pmId for Missile 3 (value 7) 
 ;            with FIFTH_PLAYER on.  
 ;          - Chain the object for Missile 2 to Missile 3.
 ;          - In the object for Missile 2 use an X offset from Missile 3 
@@ -153,9 +259,12 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 ;          - Chained objects for missiles 2, 1, and 0 should be assigned 
 ;            animation 0 (blank frame). 
 ;          FYI: This does NOT directly affect the GPRIOR value FIFTH_PLAYER.
-; color  - Value for COLPMx.  Note that the value is not copied to the color 
-;          register.  It is the responsibility of the display loop to fetch
-;          this value and write it to the correct color register. 
+;
+; The following arguments are artificial shadow registers.  The library does
+; not copy these values to corresponding hardware registers. It is the 
+; responsibility of the main code, display loop, or display list interrupt
+; to fetch these values and write them to the correct register... 
+; color  - Value for COLPMx.  
 ; size   - Use GTIA.asm's values for PM_SIZE_* 
 ; vDelay - Use GTIA.asm's values for VD_*.  Code setting VDELAY must mask based on pmID.
 ;
@@ -173,7 +282,7 @@ SEQBLANKFRAME = $FF  ; If a sequence is assigned FF, it will write
 		sta zbPmgCurrentIdent ; Set in the zero page current object id.
 	.endif
 
-	.if :pmID<8 ; Player/Missile number or turn if off ($FF)
+	.if :pmID<MAX_PMG_IDENT ; Player/Missile number or turn if off ($FF)
 		lda #:pmID
 	.else
 		lda #PMGNOOBJECT  ; Not a valid player/missile

@@ -2,7 +2,7 @@
 ; Data declarations and subroutine library code
 ; performing Player/missile operations.
 ;
-; REQUIRED DEFINITIONS:
+; REQUIRED DEFINITIONS (per command line or defined before including macros):
 ;
 ; PMG_RES
 ; Player/Missile resolution for pmgraphics macros/library.
@@ -12,122 +12,86 @@
 ; If the command line build is necessary this is:
 ; PMG_RES=0 which is PM_2LINE_RESOLUTION, or 2 line resolution.
 ;    (128 vertical pixels, or 2 scan lines per byte)
+;    (1K memory map starting at a 1K boundary.)
 ; PMG_RES=8 which is PM_1LINE_RESOLUTION, or 1 line resolution
-;    (256 vertical pixels, or 1 scan lines per byte)
+;    (256 vertical pixels, or 1 scan line per byte)
+;    (2K memory map starting at a 2K boundary.)
 ;
-; vsPmgRam
-; This must be declared in Memory as the PMBASE
-; The consequence of this is the library is not built to support 
-; "page flipping" the player/missile PMBASE.
-
-
-; ==========================================================================
-; Player/Missile memory is declared in the Memory file.
-
-; Establish a few other immediate values relative to PMBASE
-
-; For Single Line Resolution:
-
-.if PMG_RES=PM_1LINE_RESOLUTION
-MISSILEADR = vsPmgRam+$300
-PLAYERADR0 = vsPmgRam+$400
-PLAYERADR1 = vsPmgRam+$500
-PLAYERADR2 = vsPmgRam+$600
-PLAYERADR3 = vsPmgRam+$700
-.endif
-
-; For Double Line Resolution:
-
-.if PMG_RES=PM_2LINE_RESOLUTION
-MISSILEADR = vsPmgRam+$180
-PLAYERADR0 = vsPmgRam+$200
-PLAYERADR1 = vsPmgRam+$280
-PLAYERADR2 = vsPmgRam+$300
-PLAYERADR3 = vsPmgRam+$380
-.endif
-
-; Hardware references.
-
-; The index here is the P/M Ident. 
-; Players 0 - 3, Missiles 4 - 7.
-
-; For each P/M Ident declare the memory Map starting address...
-
-vsPmgRamAddrLo
-	.byte <MISSILEADR, <MISSILEADR, <MISSILEADR, <MISSILEADR
-	.byte <PLAYERADR0, <PLAYERADR1, <PLAYERADR2, <PLAYERADR3
-
-vsPmgRamAddrHi
-	.byte >MISSILEADR, >MISSILEADR, >MISSILEADR, >MISSILEADR
-	.byte >PLAYERADR0, >PLAYERADR1, >PLAYERADR2, >PLAYERADR3
-
-; For each P/M Ident declare the masking data which is necessary
-; for missiles sharing the same bitmap.
-; Bitmap sharing is disabled when "Fifth Player" is enabled.
-
-; For reference, when Missiles are processed individually:
-; (P/M Memory AND vsPmgMaskAND_OFF) OR (Image AND vsPmgMaskAND_ON)
-
-; Turn off selected Missile bits, keep the neighbors' bits.
-
-vsPmgMaskAND_OFF .byte $FF,$FF,$FF,$FF
-				 .byte MASK_MISSILE0_BITS, MASK_MISSILE1_BITS, MASK_MISSILE2_BITS, MASK_MISSILE3_BITS
-
-; Turn off the neighbors' bits, keep the selected Missile bits.
-
-vsPmgMaskAND_ON .byte $00,$00,$00,$00
-				.byte MISSILE0_BITS, MISSILE1_BITS, MISSILE2_BITS, MISSILE3_BITS
+; PMG_MAPS
+; Number of Player/Missile memory maps supported.
+; 1 is default.  4 is maximum.
+;
+; 
+; vsPmgRam  (vsPmgRam0, vsPmgRam1, vsPmgRam2, vsPmgRam3)
+; This must be declared in Memory at a valid location suitable for 
+; ANTIC's PMBASE register relative to the vertical dimensions 
+; defined by PMG_RES above.
+; 
+; The macros file will provide a few other calculated values based on 
+; the definitions above.
 
 
 ;===============================================================================
+; This is a general purpose library for Player/Missile graphics which is 
+; flexible along certain design lines.  Fair Warning: "General Purpose" plus
+; "Flexible" means it does not deliver the most optimal performance for
+; anything it does.  
+;
+; While it is flexible for some situations, no library can account for all 
+; the possible uses.  This library could be considered overkill for a program 
+; using Player/Missiles as simple overlay objects to add color to the 
+; playfield.  Alternatively, it would be inadequate for a program running a 
+; horizontal kernel to duplicate player/missile objects on the same scan line.
+; This is an attempt at a happy medium.
+;
 ; The Atari has four, 8-bit wide "player" objects, and four, 2-bit wide
 ; "missile" objects per scan line.  Naturally, this poses some limits and
-; requires some cleverness to make it appear there are more objects.
+; requires some cleverness to make it appear there are more objects.  The 
+; library supports methods of Player/missile re-use to make it appear there
+; are more animated objects available than the inherent hardware limit. 
 ;
-; In spite of the limitations the system is highly flexible, and no
-; library for games can account for all the possible uses.  This library
-; could be overkill for a program using Player/Missiles as overlay objects
-; to add color to the playfield.  It could also be inadequate for a program
-; running a horizontal kernel to duplicate player/missile objects on the
-; same scanline.  This is anattempt at a happy medium.
-;
-; This P/M Graphics library is a level of abstraction above the direct hardware
-; and can implement an animated image of any number of objects.  It is the
-; responsibility of other code  to track and control the number of objects
-; residing on the same scan line.
+; The P/M Graphics library is a level of abstraction above the direct hardware 
+; and does not care much about the number of Players or missiles.  It will 
+; animate images in memory for a number of objects unrelated to the actual 
+; limit of Players and Missiles on a scan line.  It is the responsibility of 
+; the application code to track, control, and limit the number of objects 
+; actually appearing on the same scan line.
 ;
 ; On the good side, since the Player/Missile bitmap is inherently the height
-; of the screen, re-use of objects is partly built-in.  Making another image
-; appear lower on the screen is only a matter of writing the bitmap data into
-; the proper place in memory.  Vertical placement of objects and animation of
-; objects are the exact same activity -- again, both are simply a matter of
-; writing the desired image bitmap into the proper place in memory.
-
-; Making the Player appear at a different horizontal location is where things
-; must get clever. Since horizontal placement is limited by the number of
-; horizontal position registers which is limited by the number of hardware
-; overlay objects in GTIA then the library operates at a level above the
-; hardware where it manages horizontal coordinates for objects, but does not
-; change the actual hardware horizontal position registers.
+; of the screen, re-use of objects at different vertical positions is 
+; essentially built-in.  Making another image appear lower on the screen is 
+; only a matter of writing the bitmap data into the proper place in memory.  
+; Vertical placement of objects and animation of objects are the exact same 
+; activity -- again, both are simply a matter of writing the desired image 
+; bitmap into the proper place in memory.
 ;
-; Since horizontal placement is a scanline by scanline activity it is the
-; job of either main program code, vertical blank interrupt code, or display
-; list interrupt code (or combinations thereof) to copy the horizontal
-; position values to the hardware registers at the right time.
+; Making the Player appear at a different horizontal location is where things
+; must get clever.  Horizontal placement is limited by the number of 
+; horizontal position registers which is limited by the number of Players and
+; Missiles in GTIA.  The library operates at a level above the hardware where 
+; it simply manages horizontal coordinates for objects, but does not change 
+; the actual hardware's horizontal position registers.
+;
+; Since horizontal placement is a scanline by scanline activity it is the job
+; of the programmer to set horizontal position registers in the main program 
+; code, vertical blank interrupt code, or display list interrupt code (or 
+; combinations thereof) to copy the horizontal position values to the hardware
+; registers at the right time.
 ;
 ; Player/Missile color and horizontal size are also related to hardware write
-; registers, so these can also be moved to this higher level of management.
+; registers, so these are also the responsibility of the programmers' 
+; application code.
 ;
 ; In short, for N objects this library maintains arrays of N "shadow registers"
 ; along with the arrays of N entries describing animation pointers, animation
-; state, X and Y values, etc.  Its realtionship to the hardware is only that it
-; copies bitmap images per the animation states to memory which happens to be
+; state, X and Y values, etc.  Its relationship to the hardware is only that it
+; copies bitmap images per the animation states into memory which happens to be
 ; where ANTIC reads them.  (It could write somewhere else completely different
 ; and the library would still function correctly to manage the object data.)
 ;
-; So, the architecture here is the "animation object" for display.
-; This libary uses the Animation data to mange image display and then
-; applies this to the Player/Missile object memory.
+; Thus, the architecture produced here is the "animation object" for display.  
+; This library uses the Animation data to mange image display and then applies 
+; this to the Player/Missile object memory.
 ;
 ; Animation ID numbers yield...
 ; lists of sequence numbers and control info which yield...
@@ -137,8 +101,201 @@ vsPmgMaskAND_ON .byte $00,$00,$00,$00
 ; Player Object -> Animation number, sequence index, and current sequence step
 ; sequence step -> frame number
 ; frame number -> bitmap address
+;
+; PMG_MAPS value: 
+; On the subject of hardware limits the library supports allocating additional
+; Player/Missile  memory maps allowing for page flipping the PMBASE per each 
+; video frame.  This allows a different set of Player/Missile objects or images
+; per each video frame.  This can provide extra objects per scan line or allow 
+; overlaying objects for additional color.  Multiple pages expand the limit of 
+; Player/Missile objects per scan line to 16, 24, or 32 depending on how much 
+; flickering a programmer wishes to inflict on the users. 
+; 
+; Is is the responsibility of the programmer's application to manage the actual
+; page flipping of the PMBASE register value for each frame.
+;
+; Two pages allows 8 Players/8 missile per line with 30fps flickering.  Most 
+; people would not be immediately aware of the flickering at this speed.
+; Three sets of images is 20fps and an obvious amount of flickering for 12 
+; Players/12 Missiles per line.
+; Four sets of images approaches evil intent with quite an annoying amount of 
+; 15fps flickering for 16 players/16 missiles per line.
+;
+; Color choice is important during page flipping.  The brightness of 
+; overlapping objects or an object and the background should be within similar
+; ranges.  Luminance value differences greater than 4 between overlapping 
+; objects makes flickering more apparent.  Also, the colors of overlapping 
+; objects average together.  So, a blue background and a red object will be 
+; the purple-ish average of the two.
 
 ; Random stream of consciousness concluded.
+
+
+; ==========================================================================
+; Player/Missile memory is declared in the Memory file.
+
+; Establish a few other immediate values relative to PMBASE.  These could 
+; have been put directly into the .byte assignments below.  They're listed 
+; here just to illustrate each memory map. 
+
+; For Single Line Resolution:
+
+.if PMG_RES=PM_1LINE_RESOLUTION
+	.if PMG_MAPS>0
+		MISSILEADR0 = vsPmgRam0+$300
+		PLAYERADR0  = vsPmgRam0+$400
+		PLAYERADR1  = vsPmgRam0+$500
+		PLAYERADR2  = vsPmgRam0+$600
+		PLAYERADR3  = vsPmgRam0+$700
+	.endif
+	.if PMG_MAPS>1
+		MISSILEADR1 = vsPmgRam1+$300
+		PLAYERADR4  = vsPmgRam1+$400
+		PLAYERADR5  = vsPmgRam1+$500
+		PLAYERADR6  = vsPmgRam1+$600
+		PLAYERADR7  = vsPmgRam1+$700
+	.endif
+	.if PMG_MAPS>2
+		MISSILEADR2 = vsPmgRam2+$300
+		PLAYERADR8  = vsPmgRam2+$400
+		PLAYERADR9  = vsPmgRam2+$500
+		PLAYERADR10 = vsPmgRam2+$600
+		PLAYERADR11 = vsPmgRam2+$700
+	.endif
+	.if PMG_MAPS>3
+		MISSILEADR3 = vsPmgRam3+$300
+		PLAYERADR12 = vsPmgRam3+$400
+		PLAYERADR13 = vsPmgRam3+$500
+		PLAYERADR14 = vsPmgRam3+$600
+		PLAYERADR15 = vsPmgRam3+$700
+	.endif
+.endif
+
+; For Double Line Resolution:
+
+.if PMG_RES=PM_2LINE_RESOLUTION
+	.if PMG_MAPS>0
+		MISSILEADR0 = vsPmgRam0+$180
+		PLAYERADR0  = vsPmgRam0+$200
+		PLAYERADR1  = vsPmgRam0+$280
+		PLAYERADR2  = vsPmgRam0+$300
+		PLAYERADR3  = vsPmgRam0+$380
+	.endif
+	.if PMG_MAPS>1
+		MISSILEADR1 = vsPmgRam1+$180
+		PLAYERADR4  = vsPmgRam1+$200
+		PLAYERADR5  = vsPmgRam1+$280
+		PLAYERADR6  = vsPmgRam1+$300
+		PLAYERADR7  = vsPmgRam1+$380
+	.endif
+	.if PMG_MAPS>2
+		MISSILEADR2 = vsPmgRam2+$180
+		PLAYERADR8  = vsPmgRam2+$200
+		PLAYERADR9  = vsPmgRam2+$280
+		PLAYERADR10 = vsPmgRam2+$300
+		PLAYERADR11 = vsPmgRam2+$380
+	.endif
+	.if PMG_MAPS>3
+		MISSILEADR3 = vsPmgRam3+$180
+		PLAYERADR12 = vsPmgRam3+$200
+		PLAYERADR13 = vsPmgRam3+$280
+		PLAYERADR14 = vsPmgRam3+$300
+		PLAYERADR15 = vsPmgRam3+$380
+	.endif
+.endif
+
+; Hardware references.
+
+; The index here is the P/M Ident. 
+; ID entries increase with the number of memory maps provided.
+; PMG_MAPS = 1: PmgIdent = Player 0  to 3,  Missile 4  to 7.
+; PMG_MAPS = 2: PmgIdent = Player 8  to 11, Missile 12 to 15.
+; PMG_MAPS = 3: PmgIdent = Player 16 to 19, Missile 20 to 23.
+; PMG_MAPS = 4: PmgIdent = Player 24 to 27, Missile 28 to 31.
+; For each P/M Ident declare the memory Map starting address...
+
+vsPmgRamAddrLo
+.if PMG_MAPS>0
+	.byte <PLAYERADR0, <PLAYERADR1, <PLAYERADR2, <PLAYERADR3
+	.byte <MISSILEADR0, <MISSILEADR0, <MISSILEADR0, <MISSILEADR0
+	.if PMG_MAPS>1
+		.byte <PLAYERADR4, <PLAYERADR5, <PLAYERADR6, <PLAYERADR7
+		.byte <MISSILEADR1, <MISSILEADR1, <MISSILEADR1, <MISSILEADR1
+		.if PMG_MAPS>2
+			.byte <PLAYERADR8, <PLAYERADR9, <PLAYERADR10, <PLAYERADR11
+			.byte <MISSILEADR2, <MISSILEADR2, <MISSILEADR2, <MISSILEADR2
+			.if PMG_MAPS>3
+				.byte <PLAYERADR12, <PLAYERADR13, <PLAYERADR14, <PLAYERADR15
+				.byte <MISSILEADR3, <MISSILEADR3, <MISSILEADR3, <MISSILEADR3
+			.endif
+		.endif
+	.endif
+.endif
+
+vsPmgRamAddrHi
+.if PMG_MAPS>0
+	.byte >PLAYERADR0, >PLAYERADR1, >PLAYERADR2, >PLAYERADR3
+	.byte >MISSILEADR0, >MISSILEADR0, >MISSILEADR0, >MISSILEADR0
+	.if PMG_MAPS>1
+		.byte >PLAYERADR4, >PLAYERADR5, >PLAYERADR6, >PLAYERADR7
+		.byte >MISSILEADR1, >MISSILEADR1, >MISSILEADR1, >MISSILEADR1
+		.if PMG_MAPS>2
+			.byte >PLAYERADR8, >PLAYERADR9, >PLAYERADR10 >PLAYERADR11
+			.byte >MISSILEADR2, >MISSILEADR2, >MISSILEADR2, >MISSILEADR2
+			.if PMG_MAPS>3
+				.byte >PLAYERADR12, >PLAYERADR13, >PLAYERADR14, >PLAYERADR15
+				.byte >MISSILEADR3, >MISSILEADR3, >MISSILEADR3, >MISSILEADR3
+			.endif
+		.endif
+	.endif
+.endif
+
+; For each P/M Ident declare the masking data which is necessary for missiles 
+; sharing the same bitmap. Bitmap sharing for Missiles is disabled when 
+; "Fifth Player" is enabled.  (GTIA.asm defined values)
+; A bit of redundancy here to maintain the lookup by P/M Ident.
+
+; For reference, when Missiles are processed individually:
+; (P/M Memory AND vsPmgMaskAND_OFF) OR (Image AND vsPmgMaskAND_ON)
+
+; Turn off selected Missile bits, keep the neighbors' bits.
+vsPmgMaskAND_OFF 
+.if PMG_MAPS>0
+	.byte $FF,$FF,$FF,$FF
+	.byte MASK_MISSILE0_BITS, MASK_MISSILE1_BITS, MASK_MISSILE2_BITS, MASK_MISSILE3_BITS
+	.if PMG_MAPS>1
+		.byte $FF,$FF,$FF,$FF
+		.byte MASK_MISSILE0_BITS, MASK_MISSILE1_BITS, MASK_MISSILE2_BITS, MASK_MISSILE3_BITS
+		.if PMG_MAPS>2
+			.byte $FF,$FF,$FF,$FF
+			.byte MASK_MISSILE0_BITS, MASK_MISSILE1_BITS, MASK_MISSILE2_BITS, MASK_MISSILE3_BITS
+			.if PMG_MAPS>3
+				.byte $FF,$FF,$FF,$FF
+				.byte MASK_MISSILE0_BITS, MASK_MISSILE1_BITS, MASK_MISSILE2_BITS, MASK_MISSILE3_BITS
+			.endif
+		.endif
+	.endif
+.endif
+
+; Turn off the neighbors' bits, keep the selected Missile bits.
+vsPmgMaskAND_ON 
+.if PMG_MAPS>0
+	.byte $00,$00,$00,$00
+	.byte MISSILE0_BITS, MISSILE1_BITS, MISSILE2_BITS, MISSILE3_BITS
+	.if PMG_MAPS>1
+		.byte $00,$00,$00,$00
+		.byte MISSILE0_BITS, MISSILE1_BITS, MISSILE2_BITS, MISSILE3_BITS
+		.if PMG_MAPS>2
+			.byte $00,$00,$00,$00
+			.byte MISSILE0_BITS, MISSILE1_BITS, MISSILE2_BITS, MISSILE3_BITS
+			.if PMG_MAPS>3
+				.byte $00,$00,$00,$00
+				.byte MISSILE0_BITS, MISSILE1_BITS, MISSILE2_BITS, MISSILE3_BITS
+			.endif
+		.endif
+	.endif
+.endif
+
 
 
 ;===============================================================================
@@ -149,8 +306,12 @@ vsPmgMaskAND_ON .byte $00,$00,$00,$00
 ; There is a part attached to the hardware, and a part that
 ; references the Animation sequences.
 
-vsPmgEnable          .ds PMGOBJECTSMAX, 0   ; Object is on/1 or off/0.  If off, skip processing.
-vsPmgIdent           .ds PMGOBJECTSMAX, $FF ; Missile 0 to 3. Player 4 to 7.  FF is unused
+vsPmgEnable          .ds PMGOBJECTSMAX, 0   ; Object is on/1 or off/0. If off, skip processing.
+vsPmgIdent           .ds PMGOBJECTSMAX, $FF ; PmgIdent value limit expands per PMG_MAPS value. FF is unused
+; PMG_MAPS = 1: PmgIdent = Player 0  to 3,  Missile 4  to 7.
+; PMG_MAPS = 2: PmgIdent = Player 8  to 11, Missile 12 to 15.
+; PMG_MAPS = 3: PmgIdent = Player 16 to 19, Missile 20 to 23.
+; PMG_MAPS = 4: PmgIdent = Player 24 to 27, Missile 28 to 31.
 
 ; Direct hardware relationships...
 
@@ -232,8 +393,8 @@ vsFrameAddrHi ; High Byte of each animation image
 	.endr
 
 vsFrameHeight ; Number of Bytes in each animation image
-	.ds 9,21 ; All nine frames 21 bytes tall
-
+	.ds 9,21 ; All nine frames 21 bytes tall, but each sequence could 
+	         ; have its own height for frames.
 
 ; Managing Animation Sequences,
 
@@ -242,6 +403,7 @@ ANIM_PLAYER    = 1 ; Player Ship
 ANIM_ENEMY1    = 2 ; Enemy 1
 ANIM_ENEMY2    = 3 ; Enemy 2
 ANIM_EXPLOSION = 4 ; Explosion
+
 
 ; given a sequence ID...
 
@@ -254,6 +416,7 @@ vsSeq2 .byte 2 ; Enemy 1 animation image (frame number 2)
 vsSeq3 .byte 3 ; Enemy 2 animation image (frame number 3)
 
 vsSeq4 .byte 4,5,6,7,8,0 ; Explosion animation images (frame numbers 4 to 8, and then blank)
+
 
 vsSeqAnimLo ; Low byte of address of each animation frame sequence.
 	.byte <vsSeq0 ; Blankitty-blank
@@ -306,8 +469,8 @@ libPmgInitObject
 
 	ldy zbPmgIdent
 
-	; By default an initized object is all 0 values, so the
-	; object is already disabled.
+	; An initialized object is all 0 values, so the object 
+	; is  disabled by default.
 
 	; The Player/Missile object is negative, so leave it disabled.
 	bmi bDoPmgInitContinue
@@ -411,6 +574,7 @@ libPmgZeroObject
 	sta vsPmgPrevHeight,x
 
 	sta vsPmgIsChain,x
+	; chain ident is non-zero.  set it below.
 	sta vsPmgXOffset,x
 	sta vsPmgYOffset,x
 
@@ -455,6 +619,8 @@ libPmgResetBase
 
 	sty vsPmgIdent,x
 
+	; shouldn't mask be included?
+	
 	rts
 
 
@@ -482,6 +648,13 @@ libPmgCopyZPToObject
 	lda zbPmgVDelay
 	sta vsPmgVDelay,x
 
+	
+	
+	
+	
+	
+	
+	
 	lda zbPmgHPos
 	sta vsPmgHPos,x
 	clc                 ; Add X offset to make real position
@@ -721,10 +894,10 @@ bPmgRedraw
 
 	cpy #PMGNOOBJECT     ; Is it assigned to a real P/M object?
 	beq bExitNoRedraw    ; No.  Exit.
-	cpy #8               ; Is it > 7? ( >=  8 is logically > 7)
-	bcs bExitNoRedraw    ; If so, then exit.
-	; technically, cpy #8 also catches the value of #PMGNOOBJECT, so the 
-	; initial comparison was not needed. 
+	mPmgCmpMaxident      ; Compare Y to hardware ID max.
+	bcs bExitNoRedraw    ; It is >=  max, so then exit.
+	; technically, the mPmgCmpMaxident/BCS also catches the value of 
+	; #PMGNOOBJECT, so the earlier comparison was not needed. 
 
 	; Valid P/M identity.
 	; Is this a fifth player child object?
@@ -732,7 +905,7 @@ bPmgRedraw
 	cmp #FIFTH_PLAYER_CHILD
 	beq bExitNoRedraw    ; Yes, do not redraw.
 
-	; Use alternative (player) mask for fifth player.
+	; Use alternative default (player) mask for fifth player.
 	cmp #FIFTH_PLAYER    ; Is it the parent object?
 	bne bCopyPMGMasks    ; No.  Copy masks as-is.
 	lda vsPmgMaskAND_OFF ; Yes.  Copy regular Player mask to Missile.
@@ -744,7 +917,7 @@ bPmgRedraw
 	; Save the mask info for the object.
 	; For reference, when Missiles are processed:
 	; P/M Memory = (P/M Memory AND vsPmgMaskAND_OFF) OR (Image AND vsPmgMaskAND_ON)
-	; if pmid = 0, 1, 2, 3 then the default mask does no masking.
+	; if pmid = a Player then the default mask does no masking.
 bCopyPMGMasks
 	lda vsPmgMaskAND_OFF,y ; retrieved by PM Ident in Y
 	sta zbPmgMaskAND_OFF

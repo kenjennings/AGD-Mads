@@ -51,7 +51,7 @@
 ; row of screen memory.  When a location is needed simply use the
 ; Y coordinate as the lookup index into the table  ( lda table,y ).
 ; Since addresses require two bytes, one table provides the low
-; byte of the addres, and the other provides the high byte.
+; byte of the address, and the other provides the high byte.
 
 ; The code to set up the table data would have looked like this:
 ;
@@ -288,10 +288,10 @@ bExitScreenBanner
 libScreenWaitScanLine
 
 bLoopWaitScanLine
-    cmp VCOUNT           ; Does A match the scanline?
-    bne bLoopWaitScanLine ; No. Then have not reached the line.
+	cmp VCOUNT           ; Does A match the scanline?
+	bne bLoopWaitScanLine ; No. Then have not reached the line.
 
-    rts ; Yes.  We're there.  exit.
+	rts ; Yes.  We're there.  exit.
 
 
 ;==============================================================================
@@ -309,17 +309,17 @@ bLoopWaitScanLine
 ;==============================================================================
 
 libScreenWaitFrames
-    tay
-    beq bExitWaitFrames
+	tay
+	beq bExitWaitFrames
 
 bLoopWaitFrames
-    jsr libScreenWaitFrame
+	jsr libScreenWaitFrame
 
-    dey
-    bne bLoopWaitFrames
+	dey
+	bne bLoopWaitFrames
 
 bExitWaitFrames
-    rts ; No.  Clock changed means frame ended.  exit.
+	rts ; No.  Clock changed means frame ended.  exit.
 
 
 ;==============================================================================
@@ -331,12 +331,12 @@ bExitWaitFrames
 ;==============================================================================
 
 libScreenWaitFrame
-    lda RTCLOK60  ; Read the jiffy clock incremented during vertical blank.
+	lda RTCLOK60  ; Read the jiffy clock incremented during vertical blank.
 
 bLoopWaitFrame
-    cmp RTCLOK60      ; Is it still the same?
-    beq bLoopWaitFrame ; Yes.  Then the frame has not ended.
+	cmp RTCLOK60      ; Is it still the same?
+	beq bLoopWaitFrame ; Yes.  Then the frame has not ended.
 
-    rts ; No.  Clock changed means frame ended.  exit.
+	rts ; No.  Clock changed means frame ended.  exit.
 
 

@@ -1443,11 +1443,15 @@ libPmgInit
 ;==============================================================================
 ; Simple hardware reset of all Player/Missile registers.
 ; Typically used only at program startup to zero everything
-; and prevent any screen glitchiness.
+; and prevent any screen glitchiness on startup.
 ;
 ; Reset all Players and Missiles horizontal positions to 0, so
 ; that none are visible no matter the size or bitmap contents.
 ; Also reset sizes.
+;
+; A wholesale screen change from a complex, multi-plexed Player/Missile
+; arrangement in the middle of program run time is the responsibility 
+; of the program to end the Players/Missiles in acceptable locations.
 
 libPmgMoveAllZero
 
@@ -1477,11 +1481,34 @@ libPmgClearBitmaps
 	tax      ; count 0 to 255.
 
 bLoopClearBitmaps
-	sta MISSILEADR,x ; Missiles
-	sta PLAYERADR0,x ; Player 0
-	sta PLAYERADR0,x ; Player 1
-	sta PLAYERADR0,x ; Player 2
-	sta PLAYERADR0,x ; Player 3
+	.if PMG_MAPS>0
+		sta MISSILEADR0,x ; Missiles
+		sta PLAYERADR0,x  ; Player 0
+		sta PLAYERADR1,x  ; Player 1
+		sta PLAYERADR2,x  ; Player 2
+		sta PLAYERADR3,x  ; Player 3
+	.endif
+	.if PMG_MAPS>1
+		sta MISSILEADR1,x ; Missiles 
+		sta PLAYERADR4,x  ; Player 0
+		sta PLAYERADR5,x  ; Player 1
+		sta PLAYERADR6,x  ; Player 2
+		sta PLAYERADR7,x  ; Player 3
+	.endif
+	.if PMG_MAPS>2
+		sta MISSILEADR2,x ; Missiles
+		sta PLAYERADR8,x  ; Player 0
+		sta PLAYERADR9,x  ; Player 1
+		sta PLAYERADR10,x ; Player 2
+		sta PLAYERADR11,x ; Player 3
+	.endif
+	.if PMG_MAPS>3
+		sta MISSILEADR3,x ; Missiles
+		sta PLAYERADR12,x ; Player 0
+		sta PLAYERADR13,x ; Player 1
+		sta PLAYERADR14,x ; Player 2
+		sta PLAYERADR15,x ; Player 3
+	.endif
 	inx
 	.if PMG_RES=PM_1LINE_RESOLUTION
 	bne bLoopClearBitmaps ; Count 1 to 255, then 0 breaks out of loop

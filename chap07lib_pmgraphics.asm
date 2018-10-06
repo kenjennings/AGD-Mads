@@ -30,6 +30,7 @@
 ; The macros file will provide a few other calculated values based on 
 ; the definitions above.
 
+Height
 
 ;===============================================================================
 ; This is a general purpose library for Player/Missile graphics which is 
@@ -278,6 +279,8 @@ vsPmgMaskAND_OFF
 .endif
 
 ; Turn off the neighbors' bits, keep the selected Missile bits.
+; Zero value is also used as a flag to identify Player's byte data.  
+; Non-Zero value means Missile data.
 vsPmgMaskAND_ON 
 .if PMG_MAPS>0
 	.byte $00,$00,$00,$00
@@ -330,12 +333,18 @@ vsPmgRealHPos        .ds PMGOBJECTSMAX, 0 ; Real X position on screen (if logic 
 vsPmgPrevHPos        .ds PMGOBJECTSMAX, 0 ; Previous Real X position before move (May be used to determine if linked object must move, too)
 vsPmgFifth           .ds PMGOBJECTSMAX, 0 ; Is Missile linked together for Fifth Player.
 
+vsPmgMaskOff         .ds MGOBJECTSMAX, 0 ; Turn off selected Missile bits, keep the neighbors' bits.
+vsPmgMaskOn          .ds MGOBJECTSMAX, 0 ; Turn off the neighbors' bits, keep the selected Missile bits.
+
+; Note that MaskOn can be used (relatively quickly) to determine 
+; that the object is a  Player v Missile.
+
 ; Still "hardware", but not registers. Just memory offsets.
 
 vsPmgVPos            .ds PMGOBJECTSMAX, 0 ; Y coordinate of each object (logical)
 vsPmgRealVPos        .ds PMGOBJECTSMAX, 0 ; Real Y position on screen (if logic adjusts PmgVPos)
 vsPmgPrevVPos        .ds PMGOBJECTSMAX, 0 ; Previous Real Y position before move  (if controls adjusts PmgVPos)
-vsPmgPrevHeight      .ds PMGOBJECTSMAX, 0 ; Remember frame height when switching between anims.
+vsPmgPrevHeight      .ds PMGOBJECTSMAX, 0 ; Remember frame height when switching between anims to erase old image.
 
 vsPmgIsChain         .ds PMGOBJECTSMAX, 0 ; This object is chained to a prior object.
 vsPmgChainIdent      .ds PMGOBJECTSMAX, 0 ; Object ID of next object linked to this.
@@ -393,8 +402,9 @@ vsFrameAddrHi ; High Byte of each animation image
 	.endr
 
 vsFrameHeight ; Number of Bytes in each animation image
-	.ds 9,21 ; All nine frames 21 bytes tall, but each sequence could 
-	         ; have its own height for frames.
+	.ds 9,21 ; All nine frames 21 bytes tall.
+			 ; All frames do not have to be the same height, but all
+			 ; frames in the same sequence should be the same hieight.
 
 ; Managing Animation Sequences,
 
@@ -455,8 +465,7 @@ vsSeqBounce .byte 0,0,0,0,0 ; Does repeat go ABCDABCD or ABCDCBABCD (0/linear, 1
 ; locations.  Then the object is copied from Page Zero back
 ; to the real PMOBJECTS entry location.
 ;
-; These base values in the Page 0 structure are set
-; by the macro:
+; These base values in the Page 0 structure are set by the macro:
 ;     objID   ; pmID   ; fifth  ;  color   ; size    ; vDelay
 ;
 ; Now, Move to object...
@@ -465,25 +474,67 @@ libPmgInitObject
 	; The physical hardware associations. . .
 
 	ldx zbPmgCurrentIdent
-	jsr libPmgZeroObject  ; Zero all PMOBJECTS variables.
+	jsr libPmgZeroObject  ; Zero all PMOBJECTs variables.
+
+	; FYI: An initialized object is (mostly) 0 values, so the object 
+	; is disabled by default.
 
 	ldy zbPmgIdent
-
-	; An initialized object is all 0 values, so the object 
-	; is  disabled by default.
-
 	; The Player/Missile object is negative, so leave it disabled.
 	bmi bDoPmgInitContinue
 
 	; Otherwise, enable the object.
 	inc vsPmgEnable,x ; Evilness.
 
-	; And reset the hardware-specific pointer and P/M ID
-	jsr libPmgResetBase
+	; Reset the hardware-specific pointer and P/M ID
+	lda zbPmgFifth 
+	jsr libPmgResetBase ; A = Fifth; X = PMOBJECT, Y = PM ID
 
-	; Copy the remaining values to P/M object.
+	; Copy the remaining base values to P/M object.
 bDoPmgInitContinue
-	jsr libPmgCopyZPToObject
+	jsr libPmgCopyZPBaseToObject
+
+	rts
+
+
+;===============================================================================
+;												PmgInitPosition A X Y
+;===============================================================================
+; Setup an on-screen object for the first time.
+;
+; The main init zero'd the PMOBJECTs entry already, so this is  simple.
+;
+; The macro puts the hardware values and coordinates into the
+; Page 0 locations.  This routine finalizes the Page Zero
+; locations.  Then the object is copied from Page Zero back
+; to the real PMOBJECTS entry location.
+;
+; These base values in the Page 0 structure are set by the macro:
+;  hPos    ; vPos    ; next chain ID   ; Chained flag  ;   Xoffset  ;  Yoffset
+
+libPmgInitPosition
+
+	ldx zbPmgCurrentIdent
+
+	jsr libPmgCopyZPPositionToObject
+
+	rts
+
+
+;===============================================================================
+;												PmgInitAnim A X Y
+;===============================================================================
+; Setup an on-screen object for the first time.
+;
+; The macro puts the hardware values and coordinates into the
+; Page 0 locations.  This routine finalizes the Page Zero
+; locations.  Then the object is copied from Page Zero back
+; to the real PMOBJECTS entry location.
+;
+; These base values in the Page 0 structure are set by the macro:
+;  anim ID    ; animEnable    ;  start frame   
+
+libPmgInitAnim
 
 	; Next, the animation data associations.
 	; Even though the hardware P/M object may be
@@ -497,46 +548,6 @@ bDoPmgInitContinue
 	jsr libPmgSetupAnim
 
 	rts
-
-
-;===============================================================================
-;												PmgInitPosition A X Y
-;===============================================================================
-; Setup an on-screen object for the first time.
-;
-; The macro puts the hardware values and coordinates into the
-; Page 0 locations.  This routine finalizes the Page Zero
-; locations.  Then the object is copied from Page Zero back
-; to the real PMOBJECTS entry location.
-;
-; These base values in the Page 0 structure are set
-; by the macro:
-;  hPos    ; vPos    ; next chain ID   ; Chained flag  ;   Xoffset  ;  Yoffset
-
-libPmgInitPosition
-
-	rts
-
-
-
-;===============================================================================
-;												PmgInitAnim A X Y
-;===============================================================================
-; Setup an on-screen object for the first time.
-;
-; The macro puts the hardware values and coordinates into the
-; Page 0 locations.  This routine finalizes the Page Zero
-; locations.  Then the object is copied from Page Zero back
-; to the real PMOBJECTS entry location.
-;
-; These base values in the Page 0 structure are set
-; by the macro:
-;  anim ID    ; animEnable    ;  start frame   
-
-libPmgInitAnim
-
-	rts
-
 
 
 ;===============================================================================
@@ -567,6 +578,9 @@ libPmgZeroObject
 	sta vsPmgRealHPos,x
 	sta vsPmgPrevHPos,x
 	sta vsPmgFifth,x
+
+	sta vsPmgMaskOff,x
+	sta vsPmgMaskOn,x
 
 	sta vsPmgVPos,x
 	sta vsPmgRealVPos,x
@@ -607,34 +621,64 @@ libPmgZeroObject
 ;===============================================================================
 ;												PmgResetBase  A  X  Y
 ;===============================================================================
-; Repopulate the Player/Missile base address in the
+; Repopulate the Player/Missile base address and Mask values in the
 ; current PMOBJECTs (X) for the Player/Missile object (Y)
+;
+; Separating this part of the setup allows main code to set all other 
+; Player/Missile parameters and them later assign to a real P/M hardware 
+; object.
+;
+; These base values in the Page 0 structure are set by the macro:
+;     objID   ; pmID   ; fifth  ;  color   ; size    ; vDelay
+;
+; X  = the current PMOBJECT ID.
+; A  = Fifth flag.
+; Y  = Player/Missile hardware object ID.
 
 libPmgResetBase
 
+	sty vsPmgIdent,x  ; Save hardware ID
+
+	pha               ; Save Fifth flag to do some common code first
+	sta vsPmgFifth,x  ; And save the Fifth flag permanently
+
+	; Regardless of Fifth Player or not, the address lookup is common.
 	lda vsPmgRamAddrLo,y
 	sta vsPmgAddrLo,x
 	lda vsPmgRamAddrHi,y
 	sta vsPmgAddrHi,x
 
-	sty vsPmgIdent,x
+	pla               ; Get Fifth Flag.
+	beq bResetPMGMask ; Fifth not set/Use regular Player or Missile mask
 
-	; shouldn't mask be included?
-	
+	; Fifth is set, so this Missile is imitating a Player.
+	lda vsPmgMaskAND_OFF
+	sta vsPmgMaskOff,x
+	lda vsPmgMaskAND_ON
+	sta vsPmgMaskOn,x
+	rts
+
+bResetPMGMask ; Fifth not set/Use regular Player or Missile mask
+	lda vsPmgMaskAND_OFF,y
+	sta vsPmgMaskOff,x
+	lda vsPmgMaskAND_ON,y
+	sta vsPmgMaskOn,x
+
 	rts
 
 
 ;===============================================================================
-;												PmgCopyZPToObject  A X
+;												PmgCopyZPBaseToObject  A X
 ;===============================================================================
 ; Copy the Page zero values to the current Player/Missile object:
 ; Excluding the PM/Base Address and P/M ident.
 ;
+; These base values in the Page 0 structure are set by the macro:
+;     objID   ; pmID   ; fifth  ;  color   ; size    ; vDelay
+;
 ; X  = the current PMOBJECT ID.
-; A  = sequence enable flag.
-; Y  = the sequence ID.
 
-libPmgCopyZPToObject
+libPmgCopyZPBaseToObject
 
 	lda zbPmgFifth
 	sta vsPmgFifth,x
@@ -648,13 +692,23 @@ libPmgCopyZPToObject
 	lda zbPmgVDelay
 	sta vsPmgVDelay,x
 
-	
-	
-	
-	
-	
-	
-	
+	rts
+
+;===============================================================================
+;												PmgCopyZPPositionToObject  A X
+;===============================================================================
+; Copy the Page zero values for position information to 
+; the current Player/missile object.
+;
+; Offset is added to determine "Real" position.
+;
+; These base values in the Page 0 structure are set by the macro:
+;  hPos    ; vPos    ; next chain ID   ; Chained flag  ;   Xoffset  ;  Yoffset
+;
+; X  = the current PMOBJECT ID.
+
+libPmgCopyZPPositionToObject
+
 	lda zbPmgHPos
 	sta vsPmgHPos,x
 	clc                 ; Add X offset to make real position
@@ -696,6 +750,9 @@ libPmgCopyZPToObject
 ;
 ; Uses Page 0 zwFrameAddr.
 ;
+; These base values in the Page 0 structure are set by the macro:
+;  anim ID    ; animEnable    ;  start frame   
+;
 ; X  = the current PMOBJECT ID.
 ; A  = the Sequence Enable Flag ( 0 off, !0 on)
 ; Y  = the Sequence ID.
@@ -723,7 +780,7 @@ libPmgSetupAnim
 
 	lda vsSeqDelay,y
 	sta vsSeqFrameDelay,x
-	sta vsSeqDelayCount,x
+	sta vsSeqDelayCount,x ; delay counter counts to 0.
 
 	lda vsSeqLoop,y
 	sta vsSeqFrameLoop,x
@@ -732,16 +789,20 @@ libPmgSetupAnim
 	sta vsSeqFrameBounce,x
 
 	ldy #0
-	sty vsSeqFrameDir,x
+	sty vsSeqFrameDir,x ; 0 is plus.  !0 is minus
 
-	lda (zwFrameAddr),y ; Get frame number 0 in this index.
+	ldy zbSeqStart          ; Get sequence frame number (passed to InitAnim)
+	lda (zwFrameAddr),y     ; Get anim frame number from this index.
 
 	sta vsSeqFrameCurrent,x ; And set current frame to same.
 	sta vsSeqFramePrev,x    ; and set previous frame to same.
 
 	inc vsPmgSeqRedraw,x  ; Force redraw at next opportunity.
-	inc vsPmgSeqBlank,x   ; Clear old frame at PrevVpos for PrevHeight.
-	
+	; Note that previous height is NOT set or changed so that clearing the 
+	; old frame triggered by vsPmgSeqBlank will work when switching 
+	; between animations.
+	inc vsPmgSeqBlank,x   ; Clear old frame at PrevVpos for PrevHeight. 
+
 	rts
 
 

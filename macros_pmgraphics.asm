@@ -312,7 +312,7 @@ vsPmgRam3
 ;
 ; 2) position and chaining (these are related)
 ;
-; hPos    - Logical Horizonal position, left to right, 0 to 255
+; hPos    - Logical Horizontal position, left to right, 0 to 255
 ; vPos    - Logical vertical position, top to bottom, 0 to 255
 ; chainID - objID of next object linked to this one. $FF for no chain
 ; isChain - Flag this is a chained object. 0/no. 1/yes. If yes, then main iteration code will skip this entry
@@ -342,7 +342,7 @@ vsPmgRam3
 	mLDA_VM :vPos
 	sta zbPmgVPos; Lib will copy to zbPmgRealVPos and zbPmgPrevVPos
 
-	mLDA_VM :chainID ; The next objext in the chain.
+	mLDA_VM :chainID ; The next object in the chain.
 	sta zbPmgChainIdent
 
 	mLDA_VM :isChain ; This object is a chained object.

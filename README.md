@@ -9,6 +9,14 @@ The game designs for Atari duplicate the 25 text lines standard with the C64.  T
 
 ---
 
+The assembly code for the Atari depends on my MADS include library here: https://github.com/kenjennings/Atari-Mads-Includes.  
+
+The MADS 6502 assembler is here: http://http://mads.atari8.info
+
+I generally build in eclipse from the WUDSN ide.  WUDSN can be found here: https://www.wudsn.com/index.php
+
+---
+
 The 6502 is the same between platforms.  Basic logic, math, and such are identical in the programs.  Generally speaking some graphics features are similar:
 
 - The actual bitmap arrangement of data for high-res and multi-color character sets is the same on the C64 as the Atari (Eight bytes per character, one byte/eight bits per each scan line from top to bottom, leftmost bit is the high bit,  or for multi-color fonts the eight bits are divided into four pairs of bits where each bit pair describes one of four color values.)

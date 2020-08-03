@@ -35,7 +35,7 @@ More detailed and rigorous use of the hardware features increase the distance of
 
 - The C64 "Sprites" have more horizontal resolution than the Atari's "Player/Missile" graphics which have more vertical resolution.  Both have different memory organization.  Multi-color objects are done differently.
 
-- The C64's VIC-II video chip has four choices of video banks providing fixed memory addresses for text, graphics, and sprites.  The Atari's ANTIC video chip can reference all of the 16-bit address space in the system for playfield displays, and Player/Missile graphics, text, etc.
+- The C64's VIC-II video chip has four choices of 16K video banks providing fixed memory addresses for text, graphics, and sprites.  The Atari's ANTIC video chip can reference all of the 64K address space in the system for playfield displays, and Player/Missile graphics, text, etc.
 
 - The C64 supports a couple kinds of text displays, and a couple graphics modes. The Atari has 14 display modes: six text modes with four kinds of character representation, and eight graphics modes.  The 14 display modes can be presented using four kinds of color interpretation methods. 
 
